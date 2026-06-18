@@ -26,13 +26,11 @@ api.interceptors.response.use(
   }
 )
 
-// ─── AUTH ───────────────────────────────────────────────
 export const authAPI = {
   login:  (data) => api.post('/auth/login', data),
   perfil: ()     => api.get('/auth/me'),
 }
 
-// ─── VEHÍCULOS ──────────────────────────────────────────
 export const vehiculosAPI = {
   listar:     (params)   => api.get('/vehiculos', { params }),
   obtener:    (id)       => api.get(`/vehiculos/${id}`),
@@ -42,7 +40,6 @@ export const vehiculosAPI = {
   costoKm:    (id)       => api.get(`/vehiculos/${id}/costo-km`),
 }
 
-// ─── CONDUCTORES ────────────────────────────────────────
 export const conductoresAPI = {
   listar:     (params)   => api.get('/conductores', { params }),
   obtener:    (id)       => api.get(`/conductores/${id}`),
@@ -51,7 +48,6 @@ export const conductoresAPI = {
   eliminar:   (id)       => api.delete(`/conductores/${id}`),
 }
 
-// ─── CLIENTES ───────────────────────────────────────────
 export const clientesAPI = {
   listar:     (params)   => api.get('/clientes', { params }),
   obtener:    (id)       => api.get(`/clientes/${id}`),
@@ -60,7 +56,6 @@ export const clientesAPI = {
   eliminar:   (id)       => api.delete(`/clientes/${id}`),
 }
 
-// ─── VIAJES ─────────────────────────────────────────────
 export const viajesAPI = {
   listar:             (params)      => api.get('/viajes', { params }),
   obtener:            (id)          => api.get(`/viajes/${id}`),
@@ -75,7 +70,6 @@ export const viajesAPI = {
   eliminarCombustible:(id, cId)     => api.delete(`/viajes/${id}/combustible/${cId}`),
 }
 
-// ─── COSTOS ─────────────────────────────────────────────
 export const costosAPI = {
   listarOperacion:        (params) => api.get('/costos/operacion', { params }),
   guardarOperacion:       (data)   => api.post('/costos/operacion', data),
@@ -83,7 +77,6 @@ export const costosAPI = {
   guardarAdministrativos: (data)   => api.post('/costos/administrativos', data),
 }
 
-// ─── REPORTES ───────────────────────────────────────────
 export const reportesAPI = {
   dashboard:        (params) => api.get('/reportes/dashboard', { params }),
   porVehiculo:      (params) => api.get('/reportes/rentabilidad-vehiculo', { params }),
