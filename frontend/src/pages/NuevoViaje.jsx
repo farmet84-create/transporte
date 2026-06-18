@@ -23,6 +23,19 @@ const CATEGORIAS_GASTO = [
   { value: 'otro',                 label: 'Otro gasto' },
 ]
 
+
+const CIUDADES = [
+  'Apartadó','Arabia','Arauca','Armenia','Barrancabermeja','Barranquilla',
+  'Bello','Bogotá','Bucaramanga','Buenaventura','Cali','Cartagena',
+  'Caucasia','Chía','Cúcuta','Duitama','Espinal','Facatativá',
+  'Florencia','Fusagasugá','Girardot','Ibagué','Inírida','Itagüí',
+  'Leticia','Manizales','Medellín','Mitú','Mocoa','Montería',
+  'Mosquera','Neiva','Palmira','Pasto','Pereira','Popayán',
+  'Puerto Carreño','Puerto Inírida','Quibdó','Riohacha','San Andrés',
+  'Santa Marta','Sincelejo','Soacha','Sogamoso','Soledad','Tunja',
+  'Turbo','Valledupar','Villavicencio','Yopal','Zipaquirá'
+].sort()
+
 export default function NuevoViaje() {
   const navigate = useNavigate()
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
@@ -226,12 +239,12 @@ export default function NuevoViaje() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Origen *</label>
-              <input {...register('origen', { required: 'Campo requerido' })} placeholder="Ciudad de origen" className="input" />
+              <select {...register('origen', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
               {errors.origen && <p className="text-red-500 text-xs mt-1">{errors.origen.message}</p>}
             </div>
             <div>
               <label className="label">Destino *</label>
-              <input {...register('destino', { required: 'Campo requerido' })} placeholder="Ciudad de destino" className="input" />
+              <select {...register('destino', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
               {errors.destino && <p className="text-red-500 text-xs mt-1">{errors.destino.message}</p>}
             </div>
             <div>
