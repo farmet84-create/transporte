@@ -17,6 +17,8 @@ const nav = [
   { to: '/reportes',   icon: BarChart2,        label: 'Reportes' },
 ]
 
+const LOGO = 'https://waappbusiness.com/wp-content/uploads/2026/01/cropped-walogo-blanco.png'
+
 export default function Layout() {
   const { usuario, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -31,8 +33,8 @@ export default function Layout() {
     <aside className={`flex flex-col h-full bg-primary-900 text-white ${mobile ? 'w-full' : 'w-64'}`}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-primary-700">
-        <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-          <Truck className="w-5 h-5 text-white" />
+        <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center bg-white/10">
+          <img src={LOGO} alt="Logo" className="w-9 h-9 object-contain" />
         </div>
         <div>
           <p className="font-bold text-sm">TransportePro</p>
@@ -103,7 +105,7 @@ export default function Layout() {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Truck className="w-5 h-5 text-primary-600" />
+            <img src={LOGO} alt="Logo" className="w-6 h-6 object-contain" />
             <span className="font-semibold text-sm">TransportePro</span>
           </div>
           <div className="w-9" />
