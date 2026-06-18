@@ -68,8 +68,10 @@ export const viajesAPI = {
   crear:         (data)   => api.post('/viajes', data),
   cambiarEstado: (id, estado) => api.put(`/viajes/${id}/estado`, { estado }),
   agregarGasto:  (id, data)   => api.post(`/viajes/${id}/gastos`, data),
-  eliminarGasto: (id, gastoId) => api.delete(`/viajes/${id}/gastos/${gastoId}`),
-  eliminar:      (id)          => api.delete(`/viajes/${id}`),
+  eliminarGasto:      (id, gastoId) => api.delete(`/viajes/\${id}/gastos/\${gastoId}`),
+  agregarCombustible: (id, data)   => api.post(`/viajes/\${id}/combustible`, data),
+  eliminarCombustible:(id, cId)    => api.delete(`/viajes/\${id}/combustible/\${cId}`),
+  eliminar:           (id)         => api.delete(`/viajes/\${id}`),
 }
 
 // ─── COSTOS ─────────────────────────────────────────────
