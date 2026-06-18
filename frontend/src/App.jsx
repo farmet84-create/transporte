@@ -1,20 +1,19 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import useAuthStore from './store/authStore'
-import Layout    from './components/layout/Layout'
-import Login     from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Viajes    from './pages/Viajes'
+import Layout       from './components/layout/Layout'
+import Login        from './pages/Login'
+import Dashboard    from './pages/Dashboard'
+import Viajes       from './pages/Viajes'
 import NuevoViaje   from './pages/NuevoViaje'
 import DetalleViaje from './pages/DetalleViaje'
+import Vehiculos    from './pages/Vehiculos'
 
-// Ruta protegida
 function Privada({ children }) {
   const { token } = useAuthStore()
   return token ? children : <Navigate to="/login" replace />
 }
 
-// Páginas temporales para las rutas no implementadas aún
 const Pendiente = ({ nombre }) => (
   <div className="flex items-center justify-center h-64">
     <div className="text-center">
@@ -40,7 +39,7 @@ export default function App() {
           <Route path="/viajes"       element={<Viajes />} />
           <Route path="/viajes/nuevo" element={<NuevoViaje />} />
           <Route path="/viajes/:id"   element={<DetalleViaje />} />
-          <Route path="/vehiculos"    element={<Pendiente nombre="Vehículos" />} />
+          <Route path="/vehiculos"    element={<Vehiculos />} />
           <Route path="/conductores"  element={<Pendiente nombre="Conductores" />} />
           <Route path="/clientes"     element={<Pendiente nombre="Clientes" />} />
           <Route path="/costos"       element={<Pendiente nombre="Costos mensuales" />} />
