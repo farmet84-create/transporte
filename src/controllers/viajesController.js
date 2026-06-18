@@ -1,4 +1,4 @@
-'use strict';
+  'use strict';
 
 const { pool } = require('../config/database');
 const {
@@ -367,7 +367,25 @@ async function rentabilidad(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// DELETE /api/viajes/:id
+async function eliminarViaje(req, res, next) {
+  try {
+    const { id } = req.params;
+    const empresaId = req.usuario.empresa_id;
+    const [rows] = await pool.query(
+      'SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL',
+      [id, empresaId]
+    );
+    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
+    await pool.query(
+      'UPDATE viajes SET eliminado_en = NOW(), actualizado_por = ? WHERE id = ?',
+      [req.usuario.id, id]
+    );
+    return ok(res, null, 'Viaje eliminado');
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   listar, obtener, crear, actualizar, cambiarEstado,
-  agregarGasto, eliminarGasto, rentabilidad
+  agregarGasto, eliminarGasto, rentabilidad, eliminarViaje
 };
