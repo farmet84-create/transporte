@@ -182,6 +182,7 @@ router.post  ('/viajes',                     autenticar, autorizar('admin','oper
 router.put   ('/viajes/:id',                 autenticar, autorizar('admin','operador'), viajes.actualizar);
 router.put   ('/viajes/:id/estado',          autenticar, autorizar('admin','operador'), viajes.cambiarEstado);
 router.post  ('/viajes/:id/gastos',          autenticar, autorizar('admin','operador'), viajes.agregarGasto);
+router.delete('/viajes/:id',                 autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
 router.delete('/viajes/:id/gastos/:gastoId', autenticar, autorizar('admin','operador'), viajes.eliminarGasto);
 
 // ─── COSTOS ──────────────────────────────────────────────
