@@ -3,6 +3,6 @@ builder = "nixpacks"
 buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "caddy file-server --root /app/dist --listen :$PORT"
+startCommand = "caddy run --config /app/Caddyfile"
 healthcheckPath = "/"
 healthcheckTimeout = 60
