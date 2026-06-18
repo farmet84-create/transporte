@@ -8,6 +8,8 @@ import Viajes       from './pages/Viajes'
 import NuevoViaje   from './pages/NuevoViaje'
 import DetalleViaje from './pages/DetalleViaje'
 import Vehiculos    from './pages/Vehiculos'
+import Conductores  from './pages/Conductores'
+import Clientes     from './pages/Clientes'
 
 function Privada({ children }) {
   const { token } = useAuthStore()
@@ -40,8 +42,8 @@ export default function App() {
           <Route path="/viajes/nuevo" element={<NuevoViaje />} />
           <Route path="/viajes/:id"   element={<DetalleViaje />} />
           <Route path="/vehiculos"    element={<Vehiculos />} />
-          <Route path="/conductores"  element={<Pendiente nombre="Conductores" />} />
-          <Route path="/clientes"     element={<Pendiente nombre="Clientes" />} />
+          <Route path="/conductores"  element={<Conductores />} />
+          <Route path="/clientes"     element={<Clientes />} />
           <Route path="/costos"       element={<Pendiente nombre="Costos mensuales" />} />
           <Route path="/reportes"     element={<Pendiente nombre="Reportes" />} />
         </Route>
