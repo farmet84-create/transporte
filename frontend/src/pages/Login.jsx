@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { Truck, Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
 import { authAPI } from '../services/api'
 import useAuthStore from '../store/authStore'
+
+const LOGO = 'https://waappbusiness.com/wp-content/uploads/2026/01/cropped-walogo-blanco.png'
 
 export default function Login() {
   const navigate  = useNavigate()
@@ -36,8 +38,8 @@ export default function Login() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur rounded-2xl mb-4">
-            <Truck className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-white/10 backdrop-blur rounded-2xl mb-4">
+            <img src={LOGO} alt="Logo TransportePro" className="w-20 h-20 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-white">TransportePro</h1>
           <p className="text-primary-200 text-sm mt-1">Sistema de rentabilidad de carga</p>
