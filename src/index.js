@@ -14,6 +14,7 @@ const routes                = require('./routes/index');
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
 
 const app = express();
+app.set('trust proxy', 1)
 
 // ─── SEGURIDAD ───────────────────────────────────────────
 app.use(helmet());
