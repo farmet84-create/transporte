@@ -8,14 +8,12 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Agregar token JWT a cada request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// Manejar errores globalmente
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -36,59 +34,62 @@ export const authAPI = {
 
 // ─── VEHÍCULOS ──────────────────────────────────────────
 export const vehiculosAPI = {
-  listar:      (params) => api.get('/vehiculos', { params }),
-  obtener:     (id)     => api.get(`/vehiculos/${id}`),
-  crear:       (data)   => api.post('/vehiculos', data),
-  actualizar:  (id, data) => api.put(`/vehiculos/${id}`, data),
-  eliminar:    (id)     => api.delete(`/vehiculos/${id}`),
-  costoKm:     (id)     => api.get(`/vehiculos/${id}/costo-km`),
+  listar:     (params)   => api.get('/vehiculos', { params }),
+  obtener:    (id)       => api.get(`/vehiculos/${id}`),
+  crear:      (data)     => api.post('/vehiculos', data),
+  actualizar: (id, data) => api.put(`/vehiculos/${id}`, data),
+  eliminar:   (id)       => api.delete(`/vehiculos/${id}`),
+  costoKm:    (id)       => api.get(`/vehiculos/${id}/costo-km`),
 }
 
 // ─── CONDUCTORES ────────────────────────────────────────
 export const conductoresAPI = {
-  listar:  (params) => api.get('/conductores', { params }),
-  obtener: (id)     => api.get(`/conductores/${id}`),
-  crear:   (data)   => api.post('/conductores', data),
+  listar:     (params)   => api.get('/conductores', { params }),
+  obtener:    (id)       => api.get(`/conductores/${id}`),
+  crear:      (data)     => api.post('/conductores', data),
   actualizar: (id, data) => api.put(`/conductores/${id}`, data),
+  eliminar:   (id)       => api.delete(`/conductores/${id}`),
 }
 
 // ─── CLIENTES ───────────────────────────────────────────
 export const clientesAPI = {
-  listar:  (params) => api.get('/clientes', { params }),
-  obtener: (id)     => api.get(`/clientes/${id}`),
-  crear:   (data)   => api.post('/clientes', data),
+  listar:     (params)   => api.get('/clientes', { params }),
+  obtener:    (id)       => api.get(`/clientes/${id}`),
+  crear:      (data)     => api.post('/clientes', data),
   actualizar: (id, data) => api.put(`/clientes/${id}`, data),
+  eliminar:   (id)       => api.delete(`/clientes/${id}`),
 }
 
 // ─── VIAJES ─────────────────────────────────────────────
 export const viajesAPI = {
-  listar:        (params) => api.get('/viajes', { params }),
-  obtener:       (id)     => api.get(`/viajes/${id}`),
-  rentabilidad:  (id)     => api.get(`/viajes/${id}/rentabilidad`),
-  crear:         (data)   => api.post('/viajes', data),
-  cambiarEstado: (id, estado) => api.put(`/viajes/${id}/estado`, { estado }),
-  agregarGasto:  (id, data)   => api.post(`/viajes/${id}/gastos`, data),
-  eliminarGasto:      (id, gastoId) => api.delete(`/viajes/\${id}/gastos/\${gastoId}`),
-  agregarCombustible: (id, data)   => api.post(`/viajes/\${id}/combustible`, data),
-  eliminarCombustible:(id, cId)    => api.delete(`/viajes/\${id}/combustible/\${cId}`),
-  eliminar:           (id)         => api.delete(`/viajes/\${id}`),
+  listar:             (params)      => api.get('/viajes', { params }),
+  obtener:            (id)          => api.get(`/viajes/${id}`),
+  rentabilidad:       (id)          => api.get(`/viajes/${id}/rentabilidad`),
+  crear:              (data)        => api.post('/viajes', data),
+  actualizar:         (id, data)    => api.put(`/viajes/${id}`, data),
+  cambiarEstado:      (id, estado)  => api.put(`/viajes/${id}/estado`, { estado }),
+  eliminar:           (id)          => api.delete(`/viajes/${id}`),
+  agregarGasto:       (id, data)    => api.post(`/viajes/${id}/gastos`, data),
+  eliminarGasto:      (id, gastoId) => api.delete(`/viajes/${id}/gastos/${gastoId}`),
+  agregarCombustible: (id, data)    => api.post(`/viajes/${id}/combustible`, data),
+  eliminarCombustible:(id, cId)     => api.delete(`/viajes/${id}/combustible/${cId}`),
 }
 
 // ─── COSTOS ─────────────────────────────────────────────
 export const costosAPI = {
-  listarOperacion:       (params) => api.get('/costos/operacion', { params }),
-  guardarOperacion:      (data)   => api.post('/costos/operacion', data),
-  listarAdministrativos: (params) => api.get('/costos/administrativos', { params }),
-  guardarAdministrativos:(data)   => api.post('/costos/administrativos', data),
+  listarOperacion:        (params) => api.get('/costos/operacion', { params }),
+  guardarOperacion:       (data)   => api.post('/costos/operacion', data),
+  listarAdministrativos:  (params) => api.get('/costos/administrativos', { params }),
+  guardarAdministrativos: (data)   => api.post('/costos/administrativos', data),
 }
 
 // ─── REPORTES ───────────────────────────────────────────
 export const reportesAPI = {
-  dashboard:            (params) => api.get('/reportes/dashboard', { params }),
-  porVehiculo:          (params) => api.get('/reportes/rentabilidad-vehiculo', { params }),
-  porConductor:         (params) => api.get('/reportes/rentabilidad-conductor', { params }),
-  porCliente:           (params) => api.get('/reportes/rentabilidad-cliente', { params }),
-  evolucionMensual:     (params) => api.get('/reportes/evolucion-mensual', { params }),
+  dashboard:        (params) => api.get('/reportes/dashboard', { params }),
+  porVehiculo:      (params) => api.get('/reportes/rentabilidad-vehiculo', { params }),
+  porConductor:     (params) => api.get('/reportes/rentabilidad-conductor', { params }),
+  porCliente:       (params) => api.get('/reportes/rentabilidad-cliente', { params }),
+  evolucionMensual: (params) => api.get('/reportes/evolucion-mensual', { params }),
 }
 
 export default api
