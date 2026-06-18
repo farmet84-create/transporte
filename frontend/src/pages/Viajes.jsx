@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Plus, Filter, Truck } from 'lucide-react'
+import { Search, Plus, Filter, Truck, Trash2 } from 'lucide-react'
 import { viajesAPI } from '../services/api'
 import { formatCOP, formatPct, formatFecha, colorRentabilidad, badgeEstado, labelEstado } from '../utils/format'
 import toast from 'react-hot-toast'
@@ -13,6 +13,20 @@ export default function Viajes() {
   const [cargando, setCargando] = useState(true)
   const [pagina, setPagina]     = useState(1)
   const [filtros, setFiltros]   = useState({ placa: '', estado: '', fecha_inicio: '', fecha_fin: '' })
+
+
+  const eliminar = async (v, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm(`¿Eliminar el viaje ${v.numero_viaje}? Esta acción no se puede deshacer.`)) return
+    try {
+      await viajesAPI.eliminar(v.id)
+      toast.success('Viaje eliminado')
+      cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || 'Error al eliminar el viaje')
+    }
+  }
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -160,10 +174,17 @@ export default function Viajes() {
                     <span className={badgeEstado(v.estado)}>{labelEstado(v.estado)}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link to={`/viajes/${v.id}`}
-                      className="text-xs text-primary-600 hover:underline font-medium">
-                      Ver →
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link to={`/viajes/${v.id}`}
+                        className="text-xs text-primary-600 hover:underline font-medium">
+                        Ver →
+                      </Link>
+                      <button onClick={(e) => eliminar(v, e)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                        title="Eliminar viaje">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
