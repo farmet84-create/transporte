@@ -1,4 +1,4 @@
- import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import useAuthStore from './store/authStore'
 import Layout       from './components/layout/Layout'
@@ -10,21 +10,13 @@ import DetalleViaje from './pages/DetalleViaje'
 import Vehiculos    from './pages/Vehiculos'
 import Conductores  from './pages/Conductores'
 import Clientes     from './pages/Clientes'
+import Costos       from './pages/Costos'
+import Reportes     from './pages/Reportes'
 
 function Privada({ children }) {
   const { token } = useAuthStore()
   return token ? children : <Navigate to="/login" replace />
 }
-
-const Pendiente = ({ nombre }) => (
-  <div className="flex items-center justify-center h-64">
-    <div className="text-center">
-      <p className="text-4xl mb-3">🚧</p>
-      <h2 className="text-xl font-bold text-gray-700">{nombre}</h2>
-      <p className="text-gray-400 text-sm mt-1">Esta sección estará disponible próximamente</p>
-    </div>
-  </div>
-)
 
 export default function App() {
   return (
@@ -44,8 +36,8 @@ export default function App() {
           <Route path="/vehiculos"    element={<Vehiculos />} />
           <Route path="/conductores"  element={<Conductores />} />
           <Route path="/clientes"     element={<Clientes />} />
-          <Route path="/costos"       element={<Pendiente nombre="Costos mensuales" />} />
-          <Route path="/reportes"     element={<Pendiente nombre="Reportes" />} />
+          <Route path="/costos"       element={<Costos />} />
+          <Route path="/reportes"     element={<Reportes />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
