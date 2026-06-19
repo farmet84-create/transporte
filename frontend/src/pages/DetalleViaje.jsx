@@ -106,22 +106,24 @@ export default function DetalleViaje() {
     setGuardando(true)
     try {
       const res = await viajesAPI.actualizar(id, {
-        origen: formViaje.origen, destino: formViaje.destino,
-        fecha_salida: formViaje.fecha_salida?.substring(0,10),
-        hora_salida: formViaje.hora_salida?.substring(0,5),
-        fecha_llegada: formViaje.fecha_llegada?.substring(0,10) || null,
-        hora_llegada: formViaje.hora_llegada?.substring(0,5) || null,
-        km_recorridos: formViaje.km_recorridos,
-        numero_manifiesto: formViaje.numero_manifiesto,
-        fecha_manifiesto: formViaje.fecha_manifiesto?.substring(0,10),
-        tipo_carga: formViaje.tipo_carga,
-        peso_carga_kg: formViaje.peso_carga_kg,
-        valor_manifiesto: formViaje.valor_manifiesto,
-        anticipo: formViaje.anticipo || 0,
-        descuento_manifiesto: formViaje.descuento_manifiesto || 0,
-        valor_flete_cobrado: formViaje.valor_flete_cobrado,
-        otros_ingresos: formViaje.otros_ingresos || 0,
-        observaciones: formViaje.observaciones,
+        cliente_id:           formViaje.cliente_id,
+        origen:               formViaje.origen,
+        destino:              formViaje.destino,
+        fecha_salida:         formViaje.fecha_salida?.substring(0,10),
+        hora_salida:          formViaje.hora_salida?.substring(0,5),
+        fecha_llegada:        formViaje.fecha_llegada?.substring(0,10) || null,
+        hora_llegada:         formViaje.hora_llegada?.substring(0,5) || null,
+        km_recorridos:        formViaje.km_recorridos,
+        numero_manifiesto:    formViaje.numero_manifiesto,
+        fecha_manifiesto:     formViaje.fecha_manifiesto?.substring(0,10),
+        tipo_carga:           formViaje.tipo_carga,
+        peso_carga_kg:        formViaje.peso_carga_kg,
+        valor_manifiesto:     parseFloat(formViaje.valor_manifiesto || 0),
+        anticipo:             parseFloat(formViaje.anticipo || 0),
+        descuento_manifiesto: parseFloat(formViaje.descuento_manifiesto || 0),
+        valor_flete_cobrado:  parseFloat(formViaje.valor_flete_cobrado || 0),
+        otros_ingresos:       parseFloat(formViaje.otros_ingresos || 0),
+        observaciones:        formViaje.observaciones,
       })
       toast.success('Viaje actualizado')
       setEditando(false)
@@ -263,6 +265,13 @@ export default function DetalleViaje() {
 
             {editando ? (
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="label">Cliente</label>
+                  <select value={formViaje.cliente_id} onChange={e => setF('cliente_id', e.target.value)} className="input">
+                    <option value="">— Seleccionar cliente —</option>
+                    {(viaje.clientes || []).map(c => <option key={c.id} value={c.id}>{c.razon_social}</option>)}
+                  </select>
+                </div>
                 <div>
                   <label className="label">Origen</label>
                   <select value={formViaje.origen} onChange={e => setF('origen', e.target.value)} className="input">
