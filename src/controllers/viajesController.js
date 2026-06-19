@@ -1,4 +1,4 @@
-  'use strict';
+'use strict';
 
 const { pool } = require('../config/database');
 const {
@@ -19,25 +19,24 @@ async function listar(req, res, next) {
     let where  = `WHERE v.empresa_id = ? AND v.eliminado_en IS NULL`;
     const params = [empresaId];
 
-    if (placa)        { where += ' AND vh.placa LIKE ?';       params.push(`%${placa.toUpperCase()}%`); }
-    if (conductor_id) { where += ' AND v.conductor_id = ?';    params.push(conductor_id); }
-    if (cliente_id)   { where += ' AND v.cliente_id = ?';      params.push(cliente_id); }
-    if (estado)       { where += ' AND v.estado = ?';          params.push(estado); }
-    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?';   params.push(fecha_inicio); }
-    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?';   params.push(fecha_fin); }
+    if (placa)        { where += ' AND vh.placa LIKE ?';     params.push(`%${placa.toUpperCase()}%`); }
+    if (conductor_id) { where += ' AND v.conductor_id = ?';  params.push(conductor_id); }
+    if (cliente_id)   { where += ' AND v.cliente_id = ?';    params.push(cliente_id); }
+    if (estado)       { where += ' AND v.estado = ?';        params.push(estado); }
+    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?'; params.push(fecha_inicio); }
+    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?'; params.push(fecha_fin); }
 
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total FROM viajes v ${joins} ${where}`, params
     );
 
     const [rows] = await pool.query(
-      `SELECT
-          v.id, v.uuid, v.numero_viaje, v.fecha_salida, v.hora_salida,
+      `SELECT v.id, v.uuid, v.numero_viaje, v.fecha_salida, v.hora_salida,
           v.fecha_llegada, v.hora_llegada, v.km_recorridos,
           v.origen, v.destino, v.estado,
           v.numero_manifiesto, v.tipo_carga, v.peso_carga_kg,
-          v.valor_manifiesto, v.valor_flete_cobrado,
-          v.total_ingresos, v.total_costos,
+          v.valor_manifiesto, v.anticipo, v.descuento_manifiesto, v.saldo_manifiesto,
+          v.valor_flete_cobrado, v.total_ingresos, v.total_costos,
           v.utilidad_bruta, v.utilidad_neta, v.rentabilidad_pct,
           v.facturado, v.creado_en,
           vh.placa, vh.marca, vh.modelo,
@@ -59,6 +58,7 @@ async function obtener(req, res, next) {
     const [rows] = await pool.query(
       `SELECT v.*,
           vh.placa, vh.marca, vh.modelo, vh.tipo AS tipo_vehiculo,
+          vh.rendimiento_km_galon,
           CONCAT(c.nombres,' ',c.apellidos) AS conductor,
           c.numero_documento, c.telefono AS telefono_conductor,
           cl.razon_social AS nombre_cliente, cl.nit AS nit_cliente,
@@ -82,12 +82,16 @@ async function obtener(req, res, next) {
       [req.params.id]
     );
 
-    const [manifiestos] = await pool.query(
-      `SELECT * FROM manifiestos WHERE viaje_id = ? AND eliminado_en IS NULL`,
+    const [combustible] = await pool.query(
+      `SELECT id, uuid, nombre_estacion, km_inicial, km_final, km_recorridos,
+              valor_galon, rendimiento_km_galon, galones_gastados, valor_total, fecha, observaciones
+       FROM combustible_viaje
+       WHERE viaje_id = ? AND eliminado_en IS NULL
+       ORDER BY fecha, id`,
       [req.params.id]
     );
 
-    return ok(res, { ...rows[0], gastos, manifiestos });
+    return ok(res, { ...rows[0], gastos, combustible });
   } catch (err) { next(err); }
 }
 
@@ -99,7 +103,8 @@ async function crear(req, res, next) {
       vehiculo_id, conductor_id, cliente_id, ruta_id,
       origen, destino, fecha_salida, hora_salida, fecha_llegada, hora_llegada,
       km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-      valor_manifiesto, valor_flete_cobrado, otros_ingresos, observaciones
+      valor_manifiesto, anticipo, descuento_manifiesto,
+      valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
     const anio = new Date(fecha_salida).getFullYear();
@@ -128,28 +133,25 @@ async function crear(req, res, next) {
           vehiculo_id, conductor_id, cliente_id, ruta_id,
           origen, destino, fecha_salida, hora_salida, fecha_llegada, hora_llegada,
           km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-          valor_manifiesto, valor_flete_cobrado, otros_ingresos,
+          valor_manifiesto, anticipo, descuento_manifiesto,
+          valor_flete_cobrado, otros_ingresos,
           total_gastos_directos, costo_km_aplicado, total_costo_operacion_km,
           costo_admin_aplicado, estado, creado_por
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
       [
         uuid, empresaId, numeroViaje,
         vehiculo_id, conductor_id, cliente_id, ruta_id || null,
         origen, destino, fecha_salida, hora_salida, fecha_llegada || null, hora_llegada || null,
         kmNum, numero_manifiesto || null, fecha_manifiesto || null,
         tipo_carga || null, peso_carga_kg || null,
-        parseFloat(valor_manifiesto || 0), parseFloat(valor_flete_cobrado || 0),
+        parseFloat(valor_manifiesto || 0),
+        parseFloat(anticipo || 0),
+        parseFloat(descuento_manifiesto || 0),
+        parseFloat(valor_flete_cobrado || 0),
         parseFloat(otros_ingresos || 0),
         costoKm, kmNum * costoKm, costoAdminViaje, 'programado', req.usuario.id
       ]
     );
-
-    await registrarAuditoria({
-      empresaId, usuarioId: req.usuario.id, tabla: 'viajes',
-      registroId: result.insertId, accion: 'INSERT',
-      datoDespues: { ...req.body, numero_viaje: numeroViaje },
-      ip: req.ip, userAgent: req.headers['user-agent']
-    });
 
     const [nuevo] = await pool.query(
       `SELECT v.*, vh.placa, CONCAT(c.nombres,' ',c.apellidos) AS conductor,
@@ -165,7 +167,7 @@ async function crear(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// PUT /api/viajes/:id — actualizar datos del viaje
+// PUT /api/viajes/:id
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
@@ -181,8 +183,8 @@ async function actualizar(req, res, next) {
       origen, destino, fecha_salida, hora_salida,
       fecha_llegada, hora_llegada, km_recorridos,
       numero_manifiesto, fecha_manifiesto, tipo_carga,
-      peso_carga_kg, valor_manifiesto, valor_flete_cobrado,
-      otros_ingresos, observaciones
+      peso_carga_kg, valor_manifiesto, anticipo, descuento_manifiesto,
+      valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
     const kmNum = parseFloat(km_recorridos || antes[0].km_recorridos);
@@ -196,9 +198,9 @@ async function actualizar(req, res, next) {
         total_costo_operacion_km = ? * costo_km_aplicado,
         numero_manifiesto = ?, fecha_manifiesto = ?,
         tipo_carga = ?, peso_carga_kg = ?,
-        valor_manifiesto = ?, valor_flete_cobrado = ?,
-        otros_ingresos = ?, observaciones = ?,
-        actualizado_en = NOW(), actualizado_por = ?
+        valor_manifiesto = ?, anticipo = ?, descuento_manifiesto = ?,
+        valor_flete_cobrado = ?, otros_ingresos = ?,
+        observaciones = ?, actualizado_en = NOW(), actualizado_por = ?
        WHERE id = ? AND empresa_id = ?`,
       [
         origen        || antes[0].origen,
@@ -211,10 +213,12 @@ async function actualizar(req, res, next) {
         numero_manifiesto || null,
         fecha_manifiesto  || null,
         tipo_carga        || null,
-        parseFloat(peso_carga_kg   || 0) || null,
-        parseFloat(valor_manifiesto     || 0),
-        parseFloat(valor_flete_cobrado  || 0),
-        parseFloat(otros_ingresos       || 0),
+        parseFloat(peso_carga_kg          || 0) || null,
+        parseFloat(valor_manifiesto       || 0),
+        parseFloat(anticipo               || 0),
+        parseFloat(descuento_manifiesto   || 0),
+        parseFloat(valor_flete_cobrado    || 0),
+        parseFloat(otros_ingresos         || 0),
         observaciones || null,
         req.usuario.id, id, empresaId
       ]
@@ -224,9 +228,9 @@ async function actualizar(req, res, next) {
       `SELECT v.*, vh.placa, CONCAT(c.nombres,' ',c.apellidos) AS conductor,
               cl.razon_social AS nombre_cliente
        FROM viajes v
-       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores  c ON c.id  = v.conductor_id
-       INNER JOIN clientes    cl ON cl.id = v.cliente_id
+       INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
+       INNER JOIN conductores c ON c.id = v.conductor_id
+       INNER JOIN clientes cl ON cl.id = v.cliente_id
        WHERE v.id = ?`, [id]
     );
 
@@ -243,7 +247,7 @@ async function cambiarEstado(req, res, next) {
 
     const estadosValidos = ['programado','en_curso','completado','cancelado','liquidado'];
     if (!estadosValidos.includes(estado))
-      return error(res, `Estado inválido. Válidos: ${estadosValidos.join(', ')}`, 400);
+      return error(res, `Estado inválido`, 400);
 
     const [rows] = await pool.query(
       `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
@@ -319,6 +323,75 @@ async function eliminarGasto(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// POST /api/viajes/:id/combustible
+async function agregarCombustible(req, res, next) {
+  try {
+    const viajeId   = req.params.id;
+    const empresaId = req.usuario.empresa_id;
+    const { nombre_estacion, km_inicial, km_final, valor_galon, fecha, observaciones } = req.body;
+
+    // Obtener rendimiento del vehículo
+    const [viajeData] = await pool.query(
+      `SELECT v.vehiculo_id, vh.rendimiento_km_galon
+       FROM viajes v
+       INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
+       WHERE v.id = ? AND v.empresa_id = ?`,
+      [viajeId, empresaId]
+    );
+    if (!viajeData.length) return error(res, 'Viaje no encontrado', 404);
+
+    const rendimiento = parseFloat(viajeData[0].rendimiento_km_galon || 0);
+    if (rendimiento === 0) return error(res, 'El vehículo no tiene rendimiento km/galón registrado. Actualízalo primero.', 400);
+
+    const uuid = nuevoUuid();
+    const [result] = await pool.query(
+      `INSERT INTO combustible_viaje
+        (uuid, empresa_id, viaje_id, nombre_estacion, km_inicial, km_final,
+         valor_galon, rendimiento_km_galon, fecha, observaciones, creado_por)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [uuid, empresaId, viajeId, nombre_estacion,
+       parseFloat(km_inicial), parseFloat(km_final),
+       parseFloat(valor_galon), rendimiento,
+       fecha, observaciones || null, req.usuario.id]
+    );
+
+    const [nuevo] = await pool.query(
+      `SELECT * FROM combustible_viaje WHERE id = ?`, [result.insertId]
+    );
+    return ok(res, nuevo[0], 'Carga de combustible registrada', 201);
+  } catch (err) { next(err); }
+}
+
+// DELETE /api/viajes/:id/combustible/:combustibleId
+async function eliminarCombustible(req, res, next) {
+  try {
+    const { id: viajeId, combustibleId } = req.params;
+    await pool.query(
+      `UPDATE combustible_viaje SET eliminado_en = NOW() WHERE id = ? AND viaje_id = ?`,
+      [combustibleId, viajeId]
+    );
+    return ok(res, null, 'Registro eliminado');
+  } catch (err) { next(err); }
+}
+
+// DELETE /api/viajes/:id
+async function eliminarViaje(req, res, next) {
+  try {
+    const { id } = req.params;
+    const empresaId = req.usuario.empresa_id;
+    const [rows] = await pool.query(
+      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
+      [id, empresaId]
+    );
+    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
+    await pool.query(
+      `UPDATE viajes SET eliminado_en = NOW(), actualizado_por = ? WHERE id = ?`,
+      [req.usuario.id, id]
+    );
+    return ok(res, null, 'Viaje eliminado');
+  } catch (err) { next(err); }
+}
+
 async function recalcularGastosDirectos(viajeId) {
   await pool.query(
     `UPDATE viajes
@@ -337,7 +410,8 @@ async function rentabilidad(req, res, next) {
     const [rows] = await pool.query(
       `SELECT v.numero_viaje, v.fecha_salida, v.origen, v.destino,
           v.km_recorridos, vh.placa,
-          v.valor_manifiesto, v.valor_flete_cobrado, v.total_ingresos,
+          v.valor_manifiesto, v.anticipo, v.descuento_manifiesto, v.saldo_manifiesto,
+          v.valor_flete_cobrado, v.total_ingresos,
           v.total_gastos_directos   AS bloque1_gastos_directos,
           v.costo_km_aplicado,
           v.total_costo_operacion_km AS bloque2_costo_operacion,
@@ -352,40 +426,14 @@ async function rentabilidad(req, res, next) {
        WHERE v.id = ? AND v.empresa_id = ?`,
       [req.params.id, req.usuario.empresa_id]
     );
-
     if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-
-    const v = rows[0];
-    return ok(res, {
-      ...v,
-      desglose: {
-        ingresos: { valor_manifiesto: v.valor_manifiesto, valor_flete_cobrado: v.valor_flete_cobrado, total: v.total_ingresos },
-        costos:   { bloque1_gastos_directos: v.bloque1_gastos_directos, bloque2_costo_operacion: v.bloque2_costo_operacion, bloque3_costo_admin: v.bloque3_costo_admin, total: v.total_costos },
-        resultado:{ utilidad_bruta: v.utilidad_bruta, utilidad_neta: v.utilidad_neta, rentabilidad_pct: v.rentabilidad_pct }
-      }
-    });
-  } catch (err) { next(err); }
-}
-
-// DELETE /api/viajes/:id
-async function eliminarViaje(req, res, next) {
-  try {
-    const { id } = req.params;
-    const empresaId = req.usuario.empresa_id;
-    const [rows] = await pool.query(
-      'SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL',
-      [id, empresaId]
-    );
-    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-    await pool.query(
-      'UPDATE viajes SET eliminado_en = NOW(), actualizado_por = ? WHERE id = ?',
-      [req.usuario.id, id]
-    );
-    return ok(res, null, 'Viaje eliminado');
+    return ok(res, rows[0]);
   } catch (err) { next(err); }
 }
 
 module.exports = {
   listar, obtener, crear, actualizar, cambiarEstado,
-  agregarGasto, eliminarGasto, rentabilidad, eliminarViaje
+  agregarGasto, eliminarGasto,
+  agregarCombustible, eliminarCombustible,
+  rentabilidad, eliminarViaje
 };
