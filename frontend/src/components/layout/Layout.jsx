@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Truck, Users, UserCheck,
-  FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell
+  FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell, Sun, Moon
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import api from '../../services/api'
@@ -14,6 +14,17 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [numAlertas, setNumAlertas]   = useState(0)
+  const [oscuro, setOscuro]           = useState(() => localStorage.getItem('tema') === 'oscuro')
+
+  useEffect(() => {
+    if (oscuro) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('tema', 'oscuro')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('tema', 'claro')
+    }
+  }, [oscuro])
 
   // Cargar alertas al iniciar y programar recarga a las 11 PM cada día
   useEffect(() => {
@@ -133,6 +144,11 @@ export default function Layout() {
             <p className="text-xs truncate" style={{ color: '#6b7280' }}>{usuario?.rol}</p>
           </div>
         </div>
+        <button onClick={() => setOscuro(!oscuro)}
+          className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm transition-colors text-white/50 hover:bg-white/10 hover:text-white mb-1">
+          {oscuro ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {oscuro ? 'Modo claro' : 'Modo oscuro'}
+        </button>
         <button onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm transition-colors text-white/50 hover:bg-white/10 hover:text-white">
           <LogOut className="w-4 h-4" />
@@ -154,20 +170,26 @@ export default function Layout() {
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b dark:bg-gray-900 dark:border-gray-700">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
             <Menu className="w-5 h-5" />
           </button>
           <span className="font-semibold text-sm">WaappLatam</span>
-          <div className="relative">
-            <NavLink to="/alertas">
-              <Bell className="w-5 h-5 text-gray-600" />
-              {numAlertas > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {numAlertas > 9 ? '9+' : numAlertas}
-                </span>
-              )}
-            </NavLink>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setOscuro(!oscuro)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
+              {oscuro ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <div className="relative">
+              <NavLink to="/alertas">
+                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                {numAlertas > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {numAlertas > 9 ? '9+' : numAlertas}
+                  </span>
+                )}
+              </NavLink>
+            </div>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6"><Outlet /></main>
