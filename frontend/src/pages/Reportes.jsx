@@ -1,26 +1,63 @@
 import { useState, useEffect } from 'react'
-import { BarChart2, TrendingUp, Truck, Users, Building2 } from 'lucide-react'
+import { BarChart2, TrendingUp, Truck, Users, Building2, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend
 } from 'recharts'
 import { reportesAPI } from '../services/api'
-import { formatCOP, formatPct, formatNum, colorRentabilidad, nombreMes } from '../utils/format'
+import { formatCOP, formatPct, formatNum, colorRentabilidad } from '../utils/format'
 import toast from 'react-hot-toast'
 
 const hoy = new Date()
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
+// ─── Función para descargar CSV ───────────────────────────
+const descargarCSV = (datos, columnas, nombreArchivo) => {
+  if (!datos?.length) { toast.error('No hay datos para exportar'); return }
+
+  const encabezado = columnas.map(c => c.label).join(',')
+  const filas = datos.map(row =>
+    columnas.map(c => {
+      const val = row[c.key]
+      // Escapar comas y comillas en strings
+      if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
+        return `"${val.replace(/"/g, '""')}"`
+      }
+      return val ?? ''
+    }).join(',')
+  )
+
+  const csv = [encabezado, ...filas].join('\n')
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href     = url
+  link.download = `${nombreArchivo}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+  toast.success(`Descargado: ${nombreArchivo}.csv`)
+}
+
 const TooltipCOP = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border rounded-lg shadow-lg p-3 text-xs">
-      <p className="font-medium text-gray-700 mb-1">{label}</p>
+      <p className="font-medium text-gray-700 mb-1">{MESES[label] || label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }}>{p.name}: {formatCOP(p.value)}</p>
       ))}
     </div>
+  )
+}
+
+function BtnCSV({ onClick }) {
+  return (
+    <button onClick={onClick}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 text-xs font-medium transition-colors">
+      <Download className="w-3.5 h-3.5" />
+      Descargar CSV
+    </button>
   )
 }
 
@@ -61,10 +98,10 @@ export default function Reportes() {
   const [anio, setAnio]         = useState(hoy.getFullYear())
   const [mes, setMes]           = useState(hoy.getMonth() + 1)
   const [cargando, setCargando] = useState(false)
-  const [evolucion, setEvolucion] = useState([])
-  const [vehiculos, setVehiculos] = useState([])
+  const [evolucion, setEvolucion]     = useState([])
+  const [vehiculos, setVehiculos]     = useState([])
   const [conductores, setConductores] = useState([])
-  const [clientes, setClientes] = useState([])
+  const [clientes, setClientes]       = useState([])
 
   useEffect(() => {
     const cargar = async () => {
@@ -83,14 +120,52 @@ export default function Reportes() {
           const r = await reportesAPI.porCliente({ anio, mes })
           setClientes(r.data.datos || [])
         }
-      } catch {
-        toast.error('Error cargando reporte')
-      } finally {
-        setCargando(false)
-      }
+      } catch { toast.error('Error cargando reporte') }
+      finally { setCargando(false) }
     }
     cargar()
   }, [tab, anio, mes])
+
+  // Columnas CSV para evolución anual
+  const colsEvolucion = [
+    { key: 'mes',                   label: 'Mes' },
+    { key: 'total_viajes',          label: 'Viajes' },
+    { key: 'total_ingresos',        label: 'Ingresos' },
+    { key: 'total_costos',          label: 'Costos' },
+    { key: 'total_utilidad',        label: 'Utilidad' },
+    { key: 'rentabilidad_promedio', label: 'Rentabilidad %' },
+  ]
+
+  const colsVehiculos = [
+    { key: 'placa',                     label: 'Placa' },
+    { key: 'vehiculo',                  label: 'Vehículo' },
+    { key: 'total_viajes',              label: 'Viajes' },
+    { key: 'total_km',                  label: 'Km' },
+    { key: 'total_ingresos',            label: 'Ingresos' },
+    { key: 'total_costos',              label: 'Costos' },
+    { key: 'total_utilidad',            label: 'Utilidad' },
+    { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad %' },
+  ]
+
+  const colsConductores = [
+    { key: 'conductor',                 label: 'Conductor' },
+    { key: 'numero_documento',          label: 'Documento' },
+    { key: 'total_viajes',              label: 'Viajes' },
+    { key: 'total_km',                  label: 'Km' },
+    { key: 'total_ingresos',            label: 'Ingresos' },
+    { key: 'total_utilidad',            label: 'Utilidad' },
+    { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad %' },
+  ]
+
+  const colsClientes = [
+    { key: 'cliente',                   label: 'Cliente' },
+    { key: 'nit',                       label: 'NIT' },
+    { key: 'total_viajes',              label: 'Viajes' },
+    { key: 'total_facturado',           label: 'Facturado' },
+    { key: 'total_costos',              label: 'Costos' },
+    { key: 'total_utilidad',            label: 'Utilidad' },
+    { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad %' },
+  ]
 
   const tabs = [
     { id: 'evolucion',   label: 'Evolución anual',  icon: TrendingUp },
@@ -146,7 +221,14 @@ export default function Reportes() {
           {tab === 'evolucion' && (
             <div className="space-y-5">
               <div className="card p-5">
-                <h3 className="font-semibold text-gray-900 mb-4">Ingresos vs Costos vs Utilidad — {anio}</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Ingresos vs Costos vs Utilidad — {anio}</h3>
+                  <BtnCSV onClick={() => descargarCSV(
+                    evolucion.map(e => ({ ...e, mes: MESES[e.mes] })),
+                    colsEvolucion,
+                    `evolucion-anual-${anio}`
+                  )} />
+                </div>
                 {evolucion.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={evolucion}>
@@ -188,8 +270,9 @@ export default function Reportes() {
           {/* Por vehículo */}
           {tab === 'vehiculos' && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">Rentabilidad por vehículo — {MESES[mes]} {anio}</h3>
+                <BtnCSV onClick={() => descargarCSV(vehiculos, colsVehiculos, `vehiculos-${MESES[mes]}-${anio}`)} />
               </div>
               <TablaRentabilidad datos={vehiculos} columnas={[
                 { key: 'placa',       label: 'Placa',    render: v => <span className="font-mono font-bold bg-gray-100 px-2 py-0.5 rounded">{v}</span> },
@@ -200,7 +283,7 @@ export default function Reportes() {
                 { key: 'total_costos',   label: 'Costos',   right: true, render: v => <span className="text-red-600">{formatCOP(v)}</span> },
                 { key: 'total_utilidad', label: 'Utilidad', right: true, render: v => <span className={v >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatCOP(v)}</span> },
                 { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad', right: true,
-                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{formatPct(v)}</span> },
+                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{parseFloat(v||0).toFixed(1)}%</span> },
               ]} />
             </div>
           )}
@@ -208,8 +291,9 @@ export default function Reportes() {
           {/* Por conductor */}
           {tab === 'conductores' && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">Rentabilidad por conductor — {MESES[mes]} {anio}</h3>
+                <BtnCSV onClick={() => descargarCSV(conductores, colsConductores, `conductores-${MESES[mes]}-${anio}`)} />
               </div>
               <TablaRentabilidad datos={conductores} columnas={[
                 { key: 'conductor',   label: 'Conductor', render: v => <span className="font-medium">{v}</span> },
@@ -219,7 +303,7 @@ export default function Reportes() {
                 { key: 'total_ingresos', label: 'Ingresos', right: true, render: v => formatCOP(v) },
                 { key: 'total_utilidad', label: 'Utilidad', right: true, render: v => <span className={v >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatCOP(v)}</span> },
                 { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad', right: true,
-                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{formatPct(v)}</span> },
+                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{parseFloat(v||0).toFixed(1)}%</span> },
               ]} />
             </div>
           )}
@@ -227,8 +311,9 @@ export default function Reportes() {
           {/* Por cliente */}
           {tab === 'clientes' && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b">
+              <div className="px-5 py-4 border-b flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">Rentabilidad por cliente — {MESES[mes]} {anio}</h3>
+                <BtnCSV onClick={() => descargarCSV(clientes, colsClientes, `clientes-${MESES[mes]}-${anio}`)} />
               </div>
               <TablaRentabilidad datos={clientes} columnas={[
                 { key: 'cliente',     label: 'Cliente',   render: v => <span className="font-medium">{v}</span> },
@@ -238,7 +323,7 @@ export default function Reportes() {
                 { key: 'total_costos',    label: 'Costos',    right: true, render: v => <span className="text-red-600">{formatCOP(v)}</span> },
                 { key: 'total_utilidad',  label: 'Utilidad',  right: true, render: v => <span className={v >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>{formatCOP(v)}</span> },
                 { key: 'rentabilidad_promedio_pct', label: 'Rentabilidad', right: true,
-                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{formatPct(v)}</span> },
+                  render: v => <span className={`font-bold ${colorRentabilidad(v)}`}>{parseFloat(v||0).toFixed(1)}%</span> },
               ]} />
             </div>
           )}
