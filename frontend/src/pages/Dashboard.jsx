@@ -8,6 +8,7 @@ import { DollarSign, TrendingUp, Truck, BarChart2, Search, X, Filter } from 'luc
 import { reportesAPI, viajesAPI, vehiculosAPI, conductoresAPI, clientesAPI } from '../services/api'
 import { formatCOP, formatPct, formatFecha, colorRentabilidad, badgeEstado, labelEstado } from '../utils/format'
 import toast from 'react-hot-toast'
+import AlertasBanner from '../components/AlertasBanner'
 
 const hoy = new Date()
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
@@ -79,7 +80,7 @@ export default function Dashboard() {
         }),
         reportesAPI.porVehiculo({ anio, mes }),
       ])
-      setKpis(resKpis.data.datos?.kpis || null)
+      setKpis(resKpis.data.datos)
       setEvolucion(resEvol.data.datos || [])
       setViajes(resViajes.data.datos || [])
       setTopVehiculos(resTop.data.datos || [])
@@ -127,6 +128,9 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Banner de alertas */}
+      <AlertasBanner />
 
       {/* Panel de filtros */}
       {mostrarFiltros && (
