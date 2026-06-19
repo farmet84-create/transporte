@@ -1,4 +1,4 @@
-'use strict';
+ 'use strict';
 
 const { pool } = require('../config/database');
 const {
@@ -91,7 +91,15 @@ async function obtener(req, res, next) {
       [req.params.id]
     );
 
-    return ok(res, { ...rows[0], gastos, combustible });
+    // Lista de clientes para permitir cambio en edición
+    const [clientes] = await pool.query(
+      `SELECT id, razon_social, nit FROM clientes
+       WHERE empresa_id = ? AND eliminado_en IS NULL AND activo = 1
+       ORDER BY razon_social`,
+      [req.usuario.empresa_id]
+    );
+
+    return ok(res, { ...rows[0], gastos, combustible, clientes });
   } catch (err) { next(err); }
 }
 
@@ -167,7 +175,7 @@ async function crear(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// PUT /api/viajes/:id
+// PUT /api/viajes/:id — actualizar datos completos del viaje
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
@@ -180,7 +188,7 @@ async function actualizar(req, res, next) {
     if (!antes.length) return error(res, 'Viaje no encontrado', 404);
 
     const {
-      origen, destino, fecha_salida, hora_salida,
+      cliente_id, origen, destino, fecha_salida, hora_salida,
       fecha_llegada, hora_llegada, km_recorridos,
       numero_manifiesto, fecha_manifiesto, tipo_carga,
       peso_carga_kg, valor_manifiesto, anticipo, descuento_manifiesto,
@@ -191,6 +199,7 @@ async function actualizar(req, res, next) {
 
     await pool.query(
       `UPDATE viajes SET
+        cliente_id = ?,
         origen = ?, destino = ?,
         fecha_salida = ?, hora_salida = ?,
         fecha_llegada = ?, hora_llegada = ?,
@@ -198,27 +207,32 @@ async function actualizar(req, res, next) {
         total_costo_operacion_km = ? * costo_km_aplicado,
         numero_manifiesto = ?, fecha_manifiesto = ?,
         tipo_carga = ?, peso_carga_kg = ?,
-        valor_manifiesto = ?, anticipo = ?, descuento_manifiesto = ?,
-        valor_flete_cobrado = ?, otros_ingresos = ?,
-        observaciones = ?, actualizado_en = NOW(), actualizado_por = ?
+        valor_manifiesto = ?,
+        anticipo = ?,
+        descuento_manifiesto = ?,
+        valor_flete_cobrado = ?,
+        otros_ingresos = ?,
+        observaciones = ?,
+        actualizado_en = NOW(), actualizado_por = ?
        WHERE id = ? AND empresa_id = ?`,
       [
-        origen        || antes[0].origen,
-        destino       || antes[0].destino,
-        fecha_salida  || antes[0].fecha_salida,
-        hora_salida   || antes[0].hora_salida,
-        fecha_llegada || null,
-        hora_llegada  || null,
+        cliente_id            || antes[0].cliente_id,
+        origen                || antes[0].origen,
+        destino               || antes[0].destino,
+        fecha_salida          || antes[0].fecha_salida,
+        hora_salida           || antes[0].hora_salida,
+        fecha_llegada         || null,
+        hora_llegada          || null,
         kmNum, kmNum,
-        numero_manifiesto || null,
-        fecha_manifiesto  || null,
-        tipo_carga        || null,
-        parseFloat(peso_carga_kg          || 0) || null,
-        parseFloat(valor_manifiesto       || 0),
-        parseFloat(anticipo               || 0),
-        parseFloat(descuento_manifiesto   || 0),
-        parseFloat(valor_flete_cobrado    || 0),
-        parseFloat(otros_ingresos         || 0),
+        numero_manifiesto     || null,
+        fecha_manifiesto      || null,
+        tipo_carga            || null,
+        parseFloat(peso_carga_kg        || 0) || null,
+        parseFloat(valor_manifiesto     || 0),
+        parseFloat(anticipo             || 0),
+        parseFloat(descuento_manifiesto || 0),
+        parseFloat(valor_flete_cobrado  || 0),
+        parseFloat(otros_ingresos       || 0),
         observaciones || null,
         req.usuario.id, id, empresaId
       ]
@@ -228,9 +242,9 @@ async function actualizar(req, res, next) {
       `SELECT v.*, vh.placa, CONCAT(c.nombres,' ',c.apellidos) AS conductor,
               cl.razon_social AS nombre_cliente
        FROM viajes v
-       INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores c ON c.id = v.conductor_id
-       INNER JOIN clientes cl ON cl.id = v.cliente_id
+       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
+       INNER JOIN conductores  c ON c.id  = v.conductor_id
+       INNER JOIN clientes    cl ON cl.id = v.cliente_id
        WHERE v.id = ?`, [id]
     );
 
@@ -304,7 +318,6 @@ async function agregarGasto(req, res, next) {
     );
 
     await recalcularGastosDirectos(viajeId);
-
     const [nuevo] = await pool.query(`SELECT * FROM gastos_viaje WHERE id = ?`, [result.insertId]);
     return ok(res, nuevo[0], 'Gasto registrado', 201);
   } catch (err) { next(err); }
@@ -330,7 +343,6 @@ async function agregarCombustible(req, res, next) {
     const empresaId = req.usuario.empresa_id;
     const { nombre_estacion, km_inicial, km_final, valor_galon, fecha, observaciones } = req.body;
 
-    // Obtener rendimiento del vehículo
     const [viajeData] = await pool.query(
       `SELECT v.vehiculo_id, vh.rendimiento_km_galon
        FROM viajes v
@@ -341,7 +353,8 @@ async function agregarCombustible(req, res, next) {
     if (!viajeData.length) return error(res, 'Viaje no encontrado', 404);
 
     const rendimiento = parseFloat(viajeData[0].rendimiento_km_galon || 0);
-    if (rendimiento === 0) return error(res, 'El vehículo no tiene rendimiento km/galón registrado. Actualízalo primero.', 400);
+    if (rendimiento === 0)
+      return error(res, 'El vehículo no tiene rendimiento km/galón. Actualízalo primero en Vehículos.', 400);
 
     const uuid = nuevoUuid();
     const [result] = await pool.query(
@@ -362,13 +375,13 @@ async function agregarCombustible(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// DELETE /api/viajes/:id/combustible/:combustibleId
+// DELETE /api/viajes/:id/combustible/:cId
 async function eliminarCombustible(req, res, next) {
   try {
-    const { id: viajeId, combustibleId } = req.params;
+    const { id: viajeId, cId } = req.params;
     await pool.query(
       `UPDATE combustible_viaje SET eliminado_en = NOW() WHERE id = ? AND viaje_id = ?`,
-      [combustibleId, viajeId]
+      [cId, viajeId]
     );
     return ok(res, null, 'Registro eliminado');
   } catch (err) { next(err); }
