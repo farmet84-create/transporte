@@ -156,7 +156,7 @@ async function rentabilidadPorVehiculo(req, res, next) {
 
       // Costos administrativos del mes (prorrateados por número de viajes del vehículo)
       const [[costoAdm]] = await pool.query(
-        `SELECT COALESCE(salarios_conductores + prestaciones_sociales + seguridad_social +
+        `SELECT COALESCE(salarios_conductores + prestaciones + seguridad_social +
             administracion + contabilidad + arrendamiento + servicios_publicos +
             comunicaciones + otros, 0) AS total_admin,
             COALESCE(total_viajes_mes, 1) AS total_viajes_mes
