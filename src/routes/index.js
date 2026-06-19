@@ -9,6 +9,7 @@ const viajes    = require('../controllers/viajesController');
 const costos    = require('../controllers/costosController');
 const reportes  = require('../controllers/reportesController');
 const admin     = require('../controllers/adminController');
+const alertas   = require('../controllers/alertasController');
 const { pool }  = require('../config/database');
 
 const router = Router();
@@ -199,6 +200,9 @@ router.get('/reportes/rentabilidad-vehiculo',  autenticar, reportes.rentabilidad
 router.get('/reportes/rentabilidad-conductor', autenticar, reportes.rentabilidadPorConductor);
 router.get('/reportes/rentabilidad-cliente',   autenticar, reportes.rentabilidadPorCliente);
 router.get('/reportes/evolucion-mensual',      autenticar, reportes.evolucionMensual);
+
+// ─── ALERTAS ─────────────────────────────────────────────
+router.get('/alertas', autenticar, alertas.listar);
 
 // ─── ADMIN ───────────────────────────────────────────────
 router.get ('/admin/usuarios',     autenticar, autorizar('admin'), admin.listarUsuarios);
