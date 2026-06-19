@@ -12,6 +12,7 @@ import Conductores  from './pages/Conductores'
 import Clientes     from './pages/Clientes'
 import Costos       from './pages/Costos'
 import Reportes     from './pages/Reportes'
+import Admin        from './pages/Admin'
 
 function Privada({ children }) {
   const { token } = useAuthStore()
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/clientes"     element={<Clientes />} />
           <Route path="/costos"       element={<Costos />} />
           <Route path="/reportes"     element={<Reportes />} />
+          <Route path="/admin"        element={<Admin />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
