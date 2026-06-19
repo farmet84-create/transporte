@@ -38,7 +38,7 @@ const TooltipCOP = ({ active, payload, label }) => {
       <p className="font-semibold text-gray-700 mb-2">{MESES[label] || label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }} className="mb-0.5">
-          {p.name}: {typeof p.value === 'number' && p.value > 1000 ? formatCOP(p.value) : `${p.value}%`}
+          {p.name}: {formatCOP(p.value)}
         </p>
       ))}
     </div>
