@@ -135,18 +135,25 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <div className="hidden lg:flex flex-shrink-0"><Sidebar /></div>
 
+      {/* Sidebar — visible solo en desktop (≥1024px) */}
+      <div className="hidden lg:flex flex-shrink-0">
+        <Sidebar />
+      </div>
+
+      {/* Overlay móvil */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 z-10"><Sidebar mobile /></div>
+          <div className="absolute left-0 top-0 bottom-0 w-72 z-10">
+            <Sidebar mobile />
+          </div>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* HEADER MÓVIL — fondo oscuro fijo, íconos blancos forzados */}
+        {/* Header móvil — SOLO visible cuando el sidebar está oculto (< 1024px) */}
         <header className="lg:hidden" style={{
           display: 'flex',
           alignItems: 'center',
@@ -158,8 +165,6 @@ export default function Layout() {
           flexShrink: 0,
           zIndex: 40,
         }}>
-
-          {/* Hamburger */}
           <button onClick={() => setSidebarOpen(true)} style={{
             width: 40, height: 40,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -171,10 +176,8 @@ export default function Layout() {
             <Menu style={{ width: 20, height: 20, color: '#ffffff' }} />
           </button>
 
-          {/* Título */}
           <span style={{ fontWeight: 700, fontSize: 15, color: '#ffffff' }}>WaappLatam</span>
 
-          {/* Derecha */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button onClick={() => setOscuro(!oscuro)} style={{
               width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -184,7 +187,6 @@ export default function Layout() {
                 ? <Sun style={{ width: 18, height: 18, color: '#ffffff' }} />
                 : <Moon style={{ width: 18, height: 18, color: '#ffffff' }} />}
             </button>
-
             <div style={{ position: 'relative' }}>
               <NavLink to="/alertas" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36 }}>
                 <Bell style={{ width: 18, height: 18, color: '#ffffff' }} />
@@ -202,7 +204,6 @@ export default function Layout() {
                 )}
               </NavLink>
             </div>
-
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
               background: '#1e2a4a', border: '1.5px solid rgba(255,255,255,0.2)',
