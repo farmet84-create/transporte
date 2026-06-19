@@ -3,7 +3,7 @@ require('dotenv').config();
 const express   = require('express');
 const helmet    = require('helmet');
 const cors      = require('cors');
-const { connectDB } = require('./config/database');
+const { pool, verificarConexion } = require('./config/database');
 const logger    = require('./config/logger');
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const routes    = require('./routes');
@@ -24,7 +24,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', async (req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
+  try {
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+    res.json({ ok: true, db: 'connected', ts: new Date().toISOString() });
+  } catch {
+    res.status(500).json({ ok: false, db: 'error' });
+  }
 });
 
 app.use('/api', routes);
@@ -32,7 +39,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 const start = async () => {
-  await connectDB();
+  await verificarConexion();
   app.listen(PORT, () => logger.info(`🚀 Servidor en puerto ${PORT}`));
 };
 
