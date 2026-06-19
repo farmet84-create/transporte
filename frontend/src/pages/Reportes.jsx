@@ -1,4 +1,4 @@
- import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area, RadarChart,
@@ -201,6 +201,8 @@ export default function Reportes() {
   const [mes, setMes]   = useState(hoy.getMonth() + 1)
   const [tab, setTab]   = useState('dashboard')
   const [cargando, setCargando] = useState(false)
+  const [placaFiltro, setPlacaFiltro]   = useState('')
+  const [listaVehiculos, setListaVehiculos] = useState([])
 
   const [datosIA, setDatosIA]           = useState(null)
   const [evolucion, setEvolucion]       = useState([])
@@ -208,12 +210,24 @@ export default function Reportes() {
   const [conductores, setConductores]   = useState([])
   const [clientes, setClientes]         = useState([])
 
+  // Cargar lista de vehículos para el filtro
+  useEffect(() => {
+    import('../services/api').then(({ default: api }) => {
+      api.get('/vehiculos', { params: { limite: 100 } })
+        .then(r => setListaVehiculos(r.data.datos || []))
+        .catch(() => {})
+    })
+  }, [])
+
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
+      const params = { anio, mes }
+      if (placaFiltro) params.placa = placaFiltro
+
       const [rEvol, rVeh, rCon, rCli] = await Promise.all([
         reportesAPI.evolucionMensual({ anio }),
-        reportesAPI.porVehiculo({ anio, mes }),
+        reportesAPI.porVehiculo(params),
         reportesAPI.porConductor({ anio, mes }),
         reportesAPI.porCliente({ anio, mes }),
       ])
@@ -225,7 +239,7 @@ export default function Reportes() {
       setDatosIA({ evolucion: e, vehiculos: v, conductores: c, clientes: cl })
     } catch { toast.error('Error cargando datos') }
     finally { setCargando(false) }
-  }, [anio, mes])
+  }, [anio, mes, placaFiltro])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -263,7 +277,7 @@ export default function Reportes() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reportes de rentabilidad</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white" style={{color:"var(--text-primary)"}}>Reportes de rentabilidad</h1>
           <p className="text-gray-500 text-sm">Panel analítico para toma de decisiones estratégicas</p>
         </div>
         <div className="flex items-center gap-2">
@@ -419,6 +433,24 @@ export default function Reportes() {
           {/* ─── TAB VEHÍCULOS ─── */}
           {tab === 'vehiculos' && (
             <div className="space-y-5">
+              {/* Filtro por vehículo */}
+              <div className="card p-4 flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="label">Filtrar por vehículo</label>
+                  <select value={placaFiltro} onChange={e => setPlacaFiltro(e.target.value)} className="input">
+                    <option value="">Todos los vehículos</option>
+                    {listaVehiculos.map(v => (
+                      <option key={v.id} value={v.placa}>{v.placa} — {v.marca} {v.modelo}</option>
+                    ))}
+                  </select>
+                </div>
+                {placaFiltro && (
+                  <button onClick={() => setPlacaFiltro('')}
+                    className="mt-5 px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
+                    Limpiar filtro
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="card p-5">
                   <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Utilidad por vehículo — {MESES[mes]}</h3>
