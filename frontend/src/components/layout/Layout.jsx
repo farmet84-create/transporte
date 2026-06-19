@@ -23,7 +23,7 @@ export default function Layout() {
         .catch(() => {})
     }
     cargarAlertas()
-    const interval = setInterval(cargarAlertas, 5 * 60 * 1000)
+    const interval = setInterval(cargarAlertas, 24 * 60 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
