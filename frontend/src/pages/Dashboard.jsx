@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -80,7 +80,7 @@ export default function Dashboard() {
         }),
         reportesAPI.porVehiculo({ anio, mes }),
       ])
-      setKpis(resKpis.data.datos)
+      setKpis(resKpis.data.datos?.kpis || null)
       setEvolucion(resEvol.data.datos || [])
       setViajes(resViajes.data.datos || [])
       setTopVehiculos(resTop.data.datos || [])
