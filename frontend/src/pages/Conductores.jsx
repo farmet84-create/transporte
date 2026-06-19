@@ -12,7 +12,7 @@ const FORM_INICIAL = {
   telefono:'', email:'', direccion:'', ciudad:'',
   numero_licencia:'', categoria_licencia:'', vencimiento_licencia:'',
   fecha_ingreso:'', tipo_contrato:'indefinido',
-  salario_base:'', auxilio_transporte:'', observaciones:''
+  salario_base:'', auxilio_transporte:'', comisiones:'', observaciones:''
 }
 
 function Modal({ titulo, onClose, children }) {
@@ -101,6 +101,10 @@ function FormConductor({ inicial, onGuardar, onCancelar, cargando }) {
           <label className="label">Auxilio transporte</label>
           <input type="number" value={form.auxilio_transporte} onChange={e => set('auxilio_transporte', e.target.value)} className="input" placeholder="200000" />
         </div>
+        <div>
+          <label className="label">Comisiones</label>
+          <input type="number" value={form.comisiones} onChange={e => set('comisiones', e.target.value)} className="input" placeholder="0" />
+        </div>
       </div>
       <div>
         <label className="label">Observaciones</label>
@@ -166,21 +170,17 @@ export default function Conductores() {
     setGuardando(true)
     try {
       await conductoresAPI.actualizar(modal.id, {
-        nombres:              form.nombres,
-        apellidos:            form.apellidos,
-        tipo_documento:       form.tipo_documento,
-        telefono:             form.telefono || null,
-        email:                form.email || null,
-        ciudad:               form.ciudad || null,
-        direccion:            form.direccion || null,
-        numero_licencia:      form.numero_licencia || null,
-        categoria_licencia:   form.categoria_licencia || null,
+        nombres: form.nombres, apellidos: form.apellidos,
+        telefono: form.telefono, email: form.email,
+        ciudad: form.ciudad, direccion: form.direccion,
+        numero_licencia: form.numero_licencia,
+        categoria_licencia: form.categoria_licencia,
         vencimiento_licencia: form.vencimiento_licencia || null,
-        fecha_ingreso:        form.fecha_ingreso || null,
-        tipo_contrato:        form.tipo_contrato || null,
-        salario_base:         parseFloat(form.salario_base || 0),
-        auxilio_transporte:   parseFloat(form.auxilio_transporte || 0),
-        observaciones:        form.observaciones || null
+        fecha_ingreso: form.fecha_ingreso || null,
+        tipo_contrato: form.tipo_contrato,
+        salario_base: parseFloat(form.salario_base || 0),
+        auxilio_transporte: parseFloat(form.auxilio_transporte || 0),
+        observaciones: form.observaciones
       })
       toast.success('Conductor actualizado')
       setModal(null)
