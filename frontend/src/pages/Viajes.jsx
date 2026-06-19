@@ -1,425 +1,442 @@
- import { useState, useEffect, useCallback } from 'react'
-import { Plus, Search, Truck, Edit2, Trash2, X, Save, AlertTriangle } from 'lucide-react'
+mport { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { ArrowLeft, Search, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { vehiculosAPI } from '../services/api'
-import { formatNum, formatFecha } from '../utils/format'
+import { viajesAPI, vehiculosAPI, conductoresAPI, clientesAPI } from '../services/api'
+import { formatCOP } from '../utils/format'
 
-const TIPOS        = ['camion','tracto','furgon','doble_troque','minimula','otro']
-const COMBUSTIBLES = ['diesel','gasolina','gas','electrico','hibrido']
-const FORM_INICIAL = {
-  placa:'', marca:'', modelo:'', anio: new Date().getFullYear(),
-  tipo:'camion', tipo_combustible:'diesel',
-  capacidad_carga_kg:'', rendimiento_km_galon:'',
-  soat_vencimiento:'', soat_aseguradora:'', soat_numero_poliza:'',
-  tecnomecanica_vencimiento:'', tecnomecanica_numero:'',
-  numero_motor:'', numero_chasis:'', color:'', propietario:'', observaciones:''
-}
+const CATEGORIAS_GASTO = [
+  { value: 'combustible',          label: 'Combustible (ACPM)' },
+  { value: 'peajes',               label: 'Peajes' },
+  { value: 'viaticos',             label: 'Viáticos conductor' },
+  { value: 'parqueadero',          label: 'Parqueadero' },
+  { value: 'lavado',               label: 'Lavado vehículo' },
+  { value: 'adblue',               label: 'AdBlue' },
+  { value: 'comision_carga',       label: 'Comisión por carga' },
+  { value: 'descuento_manifiesto', label: 'Descuento manifiesto' },
+  { value: 'cargue',               label: 'Cargue' },
+  { value: 'descargue',            label: 'Descargue' },
+  { value: 'retiro_bancario',      label: 'Retiro bancario' },
+  { value: 'bascula',              label: 'Báscula' },
+  { value: 'sobrepeso',            label: 'Sobrepeso' },
+  { value: 'otro',                 label: 'Otro gasto' },
+]
 
-const diasParaVencer = (fecha) => {
-  if (!fecha) return null
-  const diff = Math.ceil((new Date(fecha) - new Date()) / (1000*60*60*24))
-  return diff
-}
 
-const BadgeVencimiento = ({ fecha }) => {
-  if (!fecha) return <span style={{ fontSize:12, color:'#9ca3af' }}>Sin registrar</span>
-  const dias = diasParaVencer(fecha)
-  if (dias < 0) return (
-    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-      <AlertTriangle style={{ width:12, height:12, color:'#dc2626' }} />
-      <span style={{ fontSize:12, color:'#dc2626', fontWeight:500 }}>Vencido</span>
-    </div>
-  )
-  if (dias <= 30) return (
-    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-      <AlertTriangle style={{ width:12, height:12, color:'#d97706' }} />
-      <span style={{ fontSize:12, color:'#d97706', fontWeight:500 }}>Vence en {dias}d</span>
-    </div>
-  )
-  return <span style={{ fontSize:12, color:'#15803d' }}>{formatFecha(fecha)}</span>
-}
+const CIUDADES = [
+  'Apartadó','Arabia','Arauca','Armenia','Barrancabermeja','Barranquilla',
+  'Bello','Bogotá','Bucaramanga','Buenaventura','Cali','Cartagena',
+  'Caucasia','Chía','Cúcuta','Duitama','Espinal','Facatativá',
+  'Florencia','Fusagasugá','Girardot','Ibagué','Inírida','Itagüí',
+  'Leticia','Manizales','Medellín','Mitú','Mocoa','Montería',
+  'Mosquera','Neiva','Palmira','Pasto','Pereira','Popayán',
+  'Puerto Carreño','Puerto Inírida','Quibdó','Riohacha','San Andrés',
+  'Santa Marta','Sincelejo','Soacha','Sogamoso','Soledad','Tunja',
+  'Turbo','Valledupar','Villavicencio','Yopal','Zipaquirá'
+].sort()
 
-// ── Modal ─────────────────────────────────────────────────
-function Modal({ titulo, onClose, children }) {
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)' }} />
-      <div style={{ position:'relative', background:'#fff', borderRadius:18, boxShadow:'0 20px 60px rgba(0,0,0,0.2)', width:'100%', maxWidth:620, maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'#fff', zIndex:10 }}>
-          <h2 style={{ fontSize:16, fontWeight:700, color:'#111827', margin:0 }}>{titulo}</h2>
-          <button onClick={onClose} style={{ background:'transparent', border:'none', cursor:'pointer', padding:6, borderRadius:8 }}>
-            <X style={{ width:18, height:18, color:'#6b7280' }} />
-          </button>
-        </div>
-        <div style={{ padding:20 }}>{children}</div>
-      </div>
-    </div>
-  )
-}
+export default function NuevoViaje() {
+  const navigate = useNavigate()
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
+  const [cargando, setCargando]     = useState(false)
+  const [vehiculos, setVehiculos]   = useState([])
+  const [conductores, setConductores] = useState([])
+  const [clientes, setClientes]     = useState([])
+  const [costoKm, setCostoKm]       = useState(null)
+  const [gastos, setGastos]         = useState([])
+  const [nuevoGasto, setNuevoGasto] = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  const [buscandoPlaca, setBuscandoPlaca] = useState(false)
 
-// ── Formulario vehículo ───────────────────────────────────
-function FormVehiculo({ inicial, onGuardar, onCancelar, cargando }) {
-  const [form, setForm] = useState(inicial || FORM_INICIAL)
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const placaBusqueda = watch('placa_busqueda')
+  const vehiculoId    = watch('vehiculo_id')
+  const km            = watch('km_recorridos')
 
-  const Field = ({ label, children }) => (
-    <div>
-      <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:4 }}>{label}</label>
-      {children}
-    </div>
-  )
+  useEffect(() => {
+    const cargarCatalogos = async () => {
+      try {
+        const [vRes, cRes, clRes] = await Promise.all([
+          vehiculosAPI.listar({ activo: true, limite: 100 }),
+          conductoresAPI.listar({ activo: true, limite: 100 }),
+          clientesAPI.listar({ activo: true, limite: 100 }),
+        ])
+        setVehiculos(vRes.data.datos || [])
+        setConductores(cRes.data.datos || [])
+        setClientes(clRes.data.datos || [])
+      } catch {
+        toast.error('Error cargando catálogos')
+      }
+    }
+    cargarCatalogos()
+  }, [])
 
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-      {/* Datos básicos */}
-      <div>
-        <p style={{ fontSize:13, fontWeight:700, color:'#374151', borderBottom:'1px solid #f1f5f9', paddingBottom:6, marginBottom:12 }}>Datos del vehículo</p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
-          <Field label="Placa *">
-            <input value={form.placa} onChange={e => set('placa', e.target.value.toUpperCase())}
-              placeholder="ABC123" className="input font-mono uppercase" maxLength={10} />
-          </Field>
-          <Field label="Tipo *">
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className="input">
-              {TIPOS.map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
-            </select>
-          </Field>
-          <Field label="Marca *">
-            <input value={form.marca} onChange={e => set('marca', e.target.value)} placeholder="Kenworth, Hino..." className="input" />
-          </Field>
-          <Field label="Modelo *">
-            <input value={form.modelo} onChange={e => set('modelo', e.target.value)} placeholder="T800, FC..." className="input" />
-          </Field>
-          <Field label="Año *">
-            <input type="number" value={form.anio} onChange={e => set('anio', e.target.value)} min="1990" max="2030" className="input" />
-          </Field>
-          <Field label="Combustible">
-            <select value={form.tipo_combustible} onChange={e => set('tipo_combustible', e.target.value)} className="input">
-              {COMBUSTIBLES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </Field>
-          <Field label="Capacidad (kg)">
-            <input type="number" value={form.capacidad_carga_kg} onChange={e => set('capacidad_carga_kg', e.target.value)} placeholder="35000" className="input" />
-          </Field>
-          <Field label="Rendimiento (km/gal)">
-            <input type="number" step="0.1" value={form.rendimiento_km_galon} onChange={e => set('rendimiento_km_galon', e.target.value)} placeholder="8.5" className="input" />
-          </Field>
-          <Field label="Color">
-            <input value={form.color} onChange={e => set('color', e.target.value)} className="input" />
-          </Field>
-          <Field label="Propietario">
-            <input value={form.propietario} onChange={e => set('propietario', e.target.value)} placeholder="Si es de tercero" className="input" />
-          </Field>
-          <Field label="N° Motor">
-            <input value={form.numero_motor} onChange={e => set('numero_motor', e.target.value)} className="input" />
-          </Field>
-          <Field label="N° Chasis">
-            <input value={form.numero_chasis} onChange={e => set('numero_chasis', e.target.value)} className="input" />
-          </Field>
-        </div>
-      </div>
+  // Buscar vehículo por placa
+  const buscarPorPlaca = async () => {
+    if (!placaBusqueda) return
+    setBuscandoPlaca(true)
+    try {
+      const res = await vehiculosAPI.listar({ placa: placaBusqueda, limite: 5 })
+      const encontrados = res.data.datos || []
+      if (encontrados.length === 1) {
+        setValue('vehiculo_id', encontrados[0].id)
+        toast.success(`Vehículo encontrado: ${encontrados[0].placa} — ${encontrados[0].marca} ${encontrados[0].modelo}`)
+        // Cargar costo/km del mes
+        const costoRes = await vehiculosAPI.costoKm(encontrados[0].id)
+        setCostoKm(costoRes.data.datos)
+      } else if (encontrados.length === 0) {
+        toast.error('No se encontró vehículo con esa placa')
+      } else {
+        setVehiculos(encontrados)
+        toast('Selecciona el vehículo de la lista', { icon: '👇' })
+      }
+    } catch {
+      toast.error('Error buscando vehículo')
+    } finally {
+      setBuscandoPlaca(false)
+    }
+  }
 
-      {/* SOAT */}
-      <div>
-        <p style={{ fontSize:13, fontWeight:700, color:'#374151', borderBottom:'1px solid #f1f5f9', paddingBottom:6, marginBottom:12 }}>🛡️ SOAT</p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
-          <Field label="Vencimiento SOAT">
-            <input type="date" value={form.soat_vencimiento||''} onChange={e => set('soat_vencimiento', e.target.value)} className="input" />
-          </Field>
-          <Field label="Aseguradora">
-            <input value={form.soat_aseguradora||''} onChange={e => set('soat_aseguradora', e.target.value)} placeholder="Sura, Bolívar..." className="input" />
-          </Field>
-          <Field label="N° Póliza">
-            <input value={form.soat_numero_poliza||''} onChange={e => set('soat_numero_poliza', e.target.value)} className="input" />
-          </Field>
-        </div>
-      </div>
+  // Cargar costo/km cuando se selecciona vehículo
+  useEffect(() => {
+    if (!vehiculoId) return
+    vehiculosAPI.costoKm(vehiculoId).then(res => setCostoKm(res.data.datos)).catch(() => {})
+  }, [vehiculoId])
 
-      {/* Tecnomecánica */}
-      <div>
-        <p style={{ fontSize:13, fontWeight:700, color:'#374151', borderBottom:'1px solid #f1f5f9', paddingBottom:6, marginBottom:12 }}>🔧 Tecnomecánica</p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
-          <Field label="Vencimiento">
-            <input type="date" value={form.tecnomecanica_vencimiento||''} onChange={e => set('tecnomecanica_vencimiento', e.target.value)} className="input" />
-          </Field>
-          <Field label="N° Certificado">
-            <input value={form.tecnomecanica_numero||''} onChange={e => set('tecnomecanica_numero', e.target.value)} className="input" />
-          </Field>
-        </div>
-      </div>
+  const totalGastos    = gastos.reduce((s, g) => s + parseFloat(g.valor || 0), 0)
+  const costoOperacion = costoKm ? (parseFloat(km || 0) * parseFloat(costoKm.costo_por_km || 0)) : 0
+  const flete          = parseFloat(watch('valor_flete_cobrado') || 0)
+  const utilidadEstim  = flete - totalGastos - costoOperacion
 
-      <div>
-        <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:4 }}>Observaciones</label>
-        <textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} className="input resize-none" />
-      </div>
+  const agregarGasto = () => {
+    if (!nuevoGasto.valor || parseFloat(nuevoGasto.valor) <= 0) {
+      toast.error('Ingresa un valor válido para el gasto')
+      return
+    }
+    setGastos(g => [...g, { ...nuevoGasto, id: Date.now() }])
+    setNuevoGasto({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  }
 
-      <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-        <button onClick={onCancelar} className="btn-secondary">Cancelar</button>
-        <button onClick={() => onGuardar(form)} disabled={cargando} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <Save style={{ width:14, height:14 }} />
-          {cargando ? 'Guardando...' : 'Guardar'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Página principal ──────────────────────────────────────
-export default function Vehiculos() {
-  const [vehiculos, setVehiculos] = useState([])
-  const [total, setTotal]         = useState(0)
-  const [cargando, setCargando]   = useState(true)
-  const [guardando, setGuardando] = useState(false)
-  const [busqueda, setBusqueda]   = useState('')
-  const [modal, setModal]         = useState(null)
-  const [pagina, setPagina]       = useState(1)
-
-  const cargar = useCallback(async () => {
+  const onSubmit = async (data) => {
+    if (!data.vehiculo_id) { toast.error('Selecciona un vehículo'); return }
     setCargando(true)
     try {
-      const params = { pagina, limite:20 }
-      if (busqueda) params.placa = busqueda
-      const res = await vehiculosAPI.listar(params)
-      setVehiculos(res.data.datos || [])
-      setTotal(res.data.paginacion?.total || 0)
-    } catch { toast.error('Error cargando vehículos') }
-    finally { setCargando(false) }
-  }, [pagina, busqueda])
+      // Crear el viaje
+      const viajeRes = await viajesAPI.crear({
+        vehiculo_id:        parseInt(data.vehiculo_id),
+        conductor_id:       parseInt(data.conductor_id),
+        cliente_id:         parseInt(data.cliente_id),
+        origen:             data.origen,
+        destino:            data.destino,
+        fecha_salida:       data.fecha_salida,
+        hora_salida:        data.hora_salida,
+        fecha_llegada:      data.fecha_llegada || null,
+        hora_llegada:       data.hora_llegada  || null,
+        km_recorridos:      parseFloat(data.km_recorridos || 0),
+        numero_manifiesto:  data.numero_manifiesto || null,
+        fecha_manifiesto:   data.fecha_manifiesto  || null,
+        tipo_carga:         data.tipo_carga         || null,
+        peso_carga_kg:      parseFloat(data.peso_carga_kg || 0) || null,
+        valor_manifiesto:   parseFloat(data.valor_manifiesto || 0),
+        valor_flete_cobrado:parseFloat(data.valor_flete_cobrado || 0),
+        otros_ingresos:     parseFloat(data.otros_ingresos || 0),
+        observaciones:      data.observaciones || null,
+      })
 
-  useEffect(() => { cargar() }, [cargar])
+      const viajeId = viajeRes.data.datos.id
 
-  const guardarNuevo = async (form) => {
-    if (!form.placa || !form.marca || !form.modelo) { toast.error('Placa, marca y modelo son requeridos'); return }
-    setGuardando(true)
-    try {
-      await vehiculosAPI.crear(form)
-      toast.success('Vehículo creado')
-      setModal(null); cargar()
-    } catch (err) { toast.error(err.response?.data?.mensaje || 'Error al crear') }
-    finally { setGuardando(false) }
+      // Agregar gastos
+      for (const g of gastos) {
+        await viajesAPI.agregarGasto(viajeId, {
+          categoria:   g.categoria,
+          descripcion: g.descripcion || null,
+          valor:       parseFloat(g.valor),
+          cantidad:    parseFloat(g.cantidad || 1),
+          fecha:       data.fecha_salida,
+        })
+      }
+
+      toast.success('Viaje registrado correctamente')
+      navigate(`/viajes/${viajeId}`)
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || 'Error registrando el viaje')
+    } finally {
+      setCargando(false)
+    }
   }
-
-  const guardarEdicion = async (form) => {
-    setGuardando(true)
-    try {
-      await vehiculosAPI.actualizar(modal.id, form)
-      toast.success('Vehículo actualizado')
-      setModal(null); cargar()
-    } catch (err) { toast.error(err.response?.data?.mensaje || 'Error al actualizar') }
-    finally { setGuardando(false) }
-  }
-
-  const eliminar = async (v) => {
-    if (!confirm(`¿Eliminar el vehículo ${v.placa}?`)) return
-    try { await vehiculosAPI.eliminar(v.id); toast.success('Eliminado'); cargar() }
-    catch { toast.error('Error al eliminar') }
-  }
-
-  const alertas = vehiculos.filter(v => {
-    const ds = diasParaVencer(v.soat_vencimiento)
-    const dt = diasParaVencer(v.tecnomecanica_vencimiento)
-    return (ds !== null && ds <= 30) || (dt !== null && dt <= 30)
-  }).length
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-
-      {/* ── Header ── */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
-        <div>
-          <h1 style={{ fontSize:20, fontWeight:800, color:'#111827', margin:0 }}>Vehículos</h1>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:4, flexWrap:'wrap' }}>
-            <p style={{ fontSize:13, color:'#6b7280', margin:0 }}>{total} vehículos</p>
-            {alertas > 0 && (
-              <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, color:'#d97706', fontWeight:600, background:'#fffbeb', padding:'2px 10px', borderRadius:20, border:'1px solid #fde68a' }}>
-                <AlertTriangle style={{ width:12, height:12 }} />
-                {alertas} documentos por vencer
-              </span>
-            )}
-          </div>
-        </div>
-        <button onClick={() => setModal('nuevo')} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6, fontSize:13 }}>
-          <Plus style={{ width:14, height:14 }} />
-          <span className="hidden sm:inline">Nuevo vehículo</span>
-          <span className="sm:hidden">Nuevo</span>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-gray-100">
+          <ArrowLeft className="w-5 h-5" />
         </button>
-      </div>
-
-      {/* ── Búsqueda ── */}
-      <div style={{ background:'#fff', borderRadius:12, padding:14, border:'1px solid #f1f5f9', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ display:'flex', gap:10 }}>
-          <div style={{ flex:1, position:'relative' }}>
-            <Truck style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', width:15, height:15, color:'#9ca3af' }} />
-            <input value={busqueda}
-              onChange={e => { setBusqueda(e.target.value.toUpperCase()); setPagina(1) }}
-              placeholder="Buscar por placa..."
-              className="input font-mono uppercase" style={{ paddingLeft:34, fontSize:13 }} />
-          </div>
-          <button onClick={cargar} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6, fontSize:13 }}>
-            <Search style={{ width:14, height:14 }} />
-            <span className="hidden sm:inline">Buscar</span>
-          </button>
-          {busqueda && (
-            <button onClick={() => { setBusqueda(''); setPagina(1) }} className="btn-secondary" style={{ fontSize:13 }}>
-              <X style={{ width:14, height:14 }} />
-            </button>
-          )}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Nuevo viaje</h1>
+          <p className="text-gray-500 text-sm">Registrar flete y calcular rentabilidad</p>
         </div>
       </div>
 
-      {/* ── Cargando ── */}
-      {cargando && (
-        <div style={{ display:'flex', justifyContent:'center', padding:40 }}>
-          <div style={{ width:32, height:32, border:'4px solid #e0e7ff', borderTop:'4px solid #4f46e5', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-        </div>
-      )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-      {/* ── Vista móvil: cards ── */}
-      {!cargando && (
-        <div className="lg:hidden" style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {vehiculos.length === 0 ? (
-            <div style={{ textAlign:'center', padding:40, color:'#9ca3af', fontSize:13 }}>
-              No hay vehículos.{' '}
-              <button onClick={() => setModal('nuevo')} style={{ color:'#4f46e5', background:'none', border:'none', cursor:'pointer', fontSize:13 }}>Agregar el primero</button>
-            </div>
-          ) : vehiculos.map(v => {
-            const dsSoat = diasParaVencer(v.soat_vencimiento)
-            const dtTec  = diasParaVencer(v.tecnomecanica_vencimiento)
-            const alerta = (dsSoat !== null && dsSoat <= 30) || (dtTec !== null && dtTec <= 30)
-            return (
-              <div key={v.id} style={{ background:'#fff', borderRadius:14, border:`1px solid ${alerta?'#fde68a':'#f1f5f9'}`, padding:16, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
-                  <div>
-                    <span style={{ fontFamily:'monospace', fontWeight:800, fontSize:16, color:'#111827', background:'#f3f4f6', padding:'3px 10px', borderRadius:8 }}>{v.placa}</span>
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <span style={{ fontSize:11, fontWeight:600, background: v.activo?'#dcfce7':'#fee2e2', color: v.activo?'#15803d':'#dc2626', padding:'2px 8px', borderRadius:20 }}>
-                      {v.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </div>
-                </div>
-
-                <p style={{ fontWeight:600, fontSize:14, color:'#111827', margin:'0 0 2px' }}>{v.marca} {v.modelo}</p>
-                <p style={{ fontSize:12, color:'#6b7280', margin:'0 0 10px' }}>Año {v.anio} · {v.tipo?.replace('_',' ')} · {v.tipo_combustible}</p>
-
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-                  <div style={{ background:'#f9fafb', borderRadius:8, padding:'8px 10px' }}>
-                    <p style={{ fontSize:10, color:'#9ca3af', margin:0 }}>Capacidad</p>
-                    <p style={{ fontSize:13, fontWeight:600, color:'#111827', margin:'2px 0 0' }}>{v.capacidad_carga_kg ? `${formatNum(v.capacidad_carga_kg)} kg` : '—'}</p>
-                  </div>
-                  <div style={{ background:'#f9fafb', borderRadius:8, padding:'8px 10px' }}>
-                    <p style={{ fontSize:10, color:'#9ca3af', margin:0 }}>Rendimiento</p>
-                    <p style={{ fontSize:13, fontWeight:600, color:'#111827', margin:'2px 0 0' }}>{v.rendimiento_km_galon ? `${v.rendimiento_km_galon} km/gal` : '—'}</p>
-                  </div>
-                </div>
-
-                <div style={{ borderTop:'1px solid #f3f4f6', paddingTop:10, marginBottom:10, display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                  <div>
-                    <p style={{ fontSize:10, color:'#9ca3af', margin:'0 0 2px' }}>🛡️ SOAT</p>
-                    <BadgeVencimiento fecha={v.soat_vencimiento} />
-                    {v.soat_aseguradora && <p style={{ fontSize:11, color:'#9ca3af', margin:'2px 0 0' }}>{v.soat_aseguradora}</p>}
-                  </div>
-                  <div>
-                    <p style={{ fontSize:10, color:'#9ca3af', margin:'0 0 2px' }}>🔧 Tecnomecánica</p>
-                    <BadgeVencimiento fecha={v.tecnomecanica_vencimiento} />
-                  </div>
-                </div>
-
-                <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                  <button onClick={() => setModal(v)}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', background:'#eff6ff', border:'none', borderRadius:8, cursor:'pointer', color:'#4f46e5', fontSize:13, fontWeight:500 }}>
-                    <Edit2 style={{ width:13, height:13 }} /> Editar
-                  </button>
-                  <button onClick={() => eliminar(v)}
-                    style={{ padding:'7px 10px', background:'#fef2f2', border:'none', borderRadius:8, cursor:'pointer', color:'#dc2626' }}>
-                    <Trash2 style={{ width:14, height:14 }} />
-                  </button>
-                </div>
+        {/* VEHÍCULO — búsqueda por placa */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+            Vehículo
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Búsqueda por placa */}
+            <div className="md:col-span-1">
+              <label className="label">Buscar por placa</label>
+              <div className="flex gap-2">
+                <input {...register('placa_busqueda')}
+                  placeholder="ABC123"
+                  className="input font-mono uppercase flex-1"
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarPorPlaca())}
+                />
+                <button type="button" onClick={buscarPorPlaca} disabled={buscandoPlaca}
+                  className="btn-primary px-3">
+                  <Search className="w-4 h-4" />
+                </button>
               </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── Vista desktop: tabla ── */}
-      {!cargando && (
-        <div className="hidden lg:block" style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', fontSize:13, borderCollapse:'collapse' }}>
-              <thead>
-                <tr style={{ background:'#1f2937' }}>
-                  {['Placa','Vehículo','Tipo','Capacidad','Km/Gal','🛡️ SOAT','🔧 Tecnomecánica','Estado',''].map(h => (
-                    <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:11, fontWeight:600, color:'#d1d5db', textTransform:'uppercase', letterSpacing:'0.04em', whiteSpace:'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {vehiculos.length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign:'center', padding:40, color:'#9ca3af', fontSize:13 }}>
-                    No hay vehículos. <button onClick={() => setModal('nuevo')} style={{ color:'#4f46e5', background:'none', border:'none', cursor:'pointer' }}>Agregar el primero</button>
-                  </td></tr>
-                ) : vehiculos.map(v => (
-                  <tr key={v.id} style={{ borderBottom:'1px solid #f3f4f6' }}
-                    onMouseEnter={e => e.currentTarget.style.background='#f9fafb'}
-                    onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                    <td style={{ padding:'10px 16px' }}>
-                      <span style={{ fontFamily:'monospace', fontWeight:700, background:'#f3f4f6', padding:'3px 8px', borderRadius:6, fontSize:12, color:'#111827' }}>{v.placa}</span>
-                    </td>
-                    <td style={{ padding:'10px 16px' }}>
-                      <p style={{ fontWeight:600, color:'#111827', margin:0 }}>{v.marca} {v.modelo}</p>
-                      <p style={{ fontSize:11, color:'#9ca3af', margin:'2px 0 0' }}>Año {v.anio}</p>
-                    </td>
-                    <td style={{ padding:'10px 16px', color:'#374151', textTransform:'capitalize' }}>{v.tipo?.replace('_',' ')}</td>
-                    <td style={{ padding:'10px 16px', color:'#374151' }}>{v.capacidad_carga_kg ? `${formatNum(v.capacidad_carga_kg)} kg` : '—'}</td>
-                    <td style={{ padding:'10px 16px', color:'#374151' }}>{v.rendimiento_km_galon ? `${v.rendimiento_km_galon} km/gal` : '—'}</td>
-                    <td style={{ padding:'10px 16px' }}>
-                      <BadgeVencimiento fecha={v.soat_vencimiento} />
-                      {v.soat_aseguradora && <p style={{ fontSize:11, color:'#9ca3af', margin:'2px 0 0' }}>{v.soat_aseguradora}</p>}
-                    </td>
-                    <td style={{ padding:'10px 16px' }}><BadgeVencimiento fecha={v.tecnomecanica_vencimiento} /></td>
-                    <td style={{ padding:'10px 16px' }}>
-                      <span style={{ fontSize:11, fontWeight:600, background: v.activo?'#dcfce7':'#fee2e2', color: v.activo?'#15803d':'#dc2626', padding:'3px 10px', borderRadius:20 }}>
-                        {v.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td style={{ padding:'10px 16px' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'flex-end' }}>
-                        <button onClick={() => setModal(v)} style={{ padding:'5px', background:'transparent', border:'none', borderRadius:6, cursor:'pointer', color:'#4f46e5' }}>
-                          <Edit2 style={{ width:15, height:15 }} />
-                        </button>
-                        <button onClick={() => eliminar(v)} style={{ padding:'5px', background:'transparent', border:'none', borderRadius:6, cursor:'pointer', color:'#ef4444' }}>
-                          <Trash2 style={{ width:15, height:15 }} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+            </div>
+            <div>
+              <label className="label">Vehículo</label>
+              <select {...register('vehiculo_id', { required: 'Selecciona un vehículo' })} className="input">
+                <option value="">— Seleccionar —</option>
+                {vehiculos.map(v => (
+                  <option key={v.id} value={v.id}>{v.placa} — {v.marca} {v.modelo}</option>
                 ))}
-              </tbody>
-            </table>
+              </select>
+              {errors.vehiculo_id && <p className="text-red-500 text-xs mt-1">{errors.vehiculo_id.message}</p>}
+            </div>
+            <div>
+              <label className="label">Conductor</label>
+              <select {...register('conductor_id', { required: 'Selecciona un conductor' })} className="input">
+                <option value="">— Seleccionar —</option>
+                {conductores.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombres} {c.apellidos}</option>
+                ))}
+              </select>
+              {errors.conductor_id && <p className="text-red-500 text-xs mt-1">{errors.conductor_id.message}</p>}
+            </div>
           </div>
-          {total > 20 && (
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderTop:'1px solid #f1f5f9', fontSize:13, color:'#6b7280' }}>
-              <span>Mostrando {vehiculos.length} de {total}</span>
-              <div style={{ display:'flex', gap:8 }}>
-                <button disabled={pagina===1} onClick={() => setPagina(p=>p-1)} className="btn-secondary" style={{ fontSize:12, opacity:pagina===1?0.4:1 }}>← Anterior</button>
-                <button disabled={pagina*20>=total} onClick={() => setPagina(p=>p+1)} className="btn-secondary" style={{ fontSize:12, opacity:pagina*20>=total?0.4:1 }}>Siguiente →</button>
-              </div>
+          {costoKm && (
+            <div className="mt-3 bg-primary-50 border border-primary-200 rounded-lg px-4 py-2 text-sm text-primary-700">
+              💡 Costo/km del mes: <strong>{formatCOP(costoKm.costo_por_km)}/km</strong>
+              {' '}— Total operación estimada: <strong>{formatCOP(costoOperacion)}</strong>
             </div>
           )}
         </div>
-      )}
 
-      {/* Modales */}
-      {modal === 'nuevo' && (
-        <Modal titulo="Nuevo vehículo" onClose={() => setModal(null)}>
-          <FormVehiculo onGuardar={guardarNuevo} onCancelar={() => setModal(null)} cargando={guardando} />
-        </Modal>
-      )}
-      {modal && modal !== 'nuevo' && (
-        <Modal titulo={`Editar — ${modal.placa}`} onClose={() => setModal(null)}>
-          <FormVehiculo inicial={modal} onGuardar={guardarEdicion} onCancelar={() => setModal(null)} cargando={guardando} />
-        </Modal>
-      )}
+        {/* TRAYECTO */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+            Trayecto
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Origen *</label>
+              <select {...register('origen', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              {errors.origen && <p className="text-red-500 text-xs mt-1">{errors.origen.message}</p>}
+            </div>
+            <div>
+              <label className="label">Destino *</label>
+              <select {...register('destino', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              {errors.destino && <p className="text-red-500 text-xs mt-1">{errors.destino.message}</p>}
+            </div>
+            <div>
+              <label className="label">Fecha de salida *</label>
+              <input type="date" {...register('fecha_salida', { required: 'Campo requerido' })} className="input" />
+              {errors.fecha_salida && <p className="text-red-500 text-xs mt-1">{errors.fecha_salida.message}</p>}
+            </div>
+            <div>
+              <label className="label">Hora de salida *</label>
+              <input type="time" {...register('hora_salida', { required: 'Campo requerido' })} className="input" />
+              {errors.hora_salida && <p className="text-red-500 text-xs mt-1">{errors.hora_salida.message}</p>}
+            </div>
+            <div>
+              <label className="label">Fecha de llegada</label>
+              <input type="date" {...register('fecha_llegada')} className="input" />
+            </div>
+            <div>
+              <label className="label">Hora de llegada</label>
+              <input type="time" {...register('hora_llegada')} className="input" />
+            </div>
+            <div>
+              <label className="label">Kilómetros recorridos</label>
+              <input type="number" step="0.1" {...register('km_recorridos')} placeholder="900" className="input" />
+            </div>
+            <div>
+              <label className="label">Cliente (dueño de la carga) *</label>
+              <select {...register('cliente_id', { required: 'Selecciona un cliente' })} className="input">
+                <option value="">— Seleccionar —</option>
+                {clientes.map(c => (
+                  <option key={c.id} value={c.id}>{c.razon_social}</option>
+                ))}
+              </select>
+              {errors.cliente_id && <p className="text-red-500 text-xs mt-1">{errors.cliente_id.message}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* MANIFIESTO */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+            Manifiesto de carga
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Número de manifiesto</label>
+              <input {...register('numero_manifiesto')} placeholder="MF-2026-0001" className="input" />
+            </div>
+            <div>
+              <label className="label">Fecha del manifiesto</label>
+              <input type="date" {...register('fecha_manifiesto')} className="input" />
+            </div>
+            <div>
+              <label className="label">Tipo de carga</label>
+              <input {...register('tipo_carga')} placeholder="Ej: Mercancía general, alimentos..." className="input" />
+            </div>
+            <div>
+              <label className="label">Peso (kg)</label>
+              <input type="number" {...register('peso_carga_kg')} placeholder="15000" className="input" />
+            </div>
+            <div>
+              <label className="label">Valor del manifiesto *</label>
+              <input type="number" {...register('valor_manifiesto', { required: 'Campo requerido' })}
+                placeholder="2500000" className="input" />
+              {errors.valor_manifiesto && <p className="text-red-500 text-xs mt-1">{errors.valor_manifiesto.message}</p>}
+            </div>
+            <div>
+              <label className="label">Flete cobrado al cliente *</label>
+              <input type="number" {...register('valor_flete_cobrado', { required: 'Campo requerido' })}
+                placeholder="2500000" className="input" />
+              {errors.valor_flete_cobrado && <p className="text-red-500 text-xs mt-1">{errors.valor_flete_cobrado.message}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* GASTOS DEL VIAJE */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
+            Gastos del viaje
+          </h2>
+
+          {/* Formulario agregar gasto */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="label">Categoría</label>
+                <select value={nuevoGasto.categoria}
+                  onChange={e => setNuevoGasto(g => ({ ...g, categoria: e.target.value }))}
+                  className="input">
+                  {CATEGORIAS_GASTO.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Descripción</label>
+                <input value={nuevoGasto.descripcion}
+                  onChange={e => setNuevoGasto(g => ({ ...g, descripcion: e.target.value }))}
+                  placeholder="Opcional" className="input" />
+              </div>
+              <div>
+                <label className="label">Valor ($)</label>
+                <input type="number" value={nuevoGasto.valor}
+                  onChange={e => setNuevoGasto(g => ({ ...g, valor: e.target.value }))}
+                  placeholder="150000" className="input" />
+              </div>
+              <button type="button" onClick={agregarGasto}
+                className="btn-primary flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" /> Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Lista de gastos */}
+          {gastos.length > 0 ? (
+            <div className="space-y-2">
+              {gastos.map((g) => (
+                <div key={g.id} className="flex items-center justify-between bg-white border rounded-lg px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className="badge-blue">
+                      {CATEGORIAS_GASTO.find(c => c.value === g.categoria)?.label || g.categoria}
+                    </span>
+                    {g.descripcion && <span className="text-gray-500 text-xs">{g.descripcion}</span>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-gray-900">{formatCOP(g.valor)}</span>
+                    <button type="button" onClick={() => setGastos(gs => gs.filter(x => x.id !== g.id))}
+                      className="text-red-400 hover:text-red-600 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-end pt-2 border-t">
+                <span className="text-sm text-gray-500 mr-3">Total gastos directos:</span>
+                <span className="font-bold text-gray-900">{formatCOP(totalGastos)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm text-center py-4">No hay gastos agregados aún</p>
+          )}
+        </div>
+
+        {/* RESUMEN ESTIMADO */}
+        {flete > 0 && (
+          <div className="card p-5 bg-gray-900 text-white">
+            <h2 className="font-semibold mb-4">Rentabilidad estimada</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-gray-400 text-xs mb-1">Flete cobrado</p>
+                <p className="font-bold text-lg">{formatCOP(flete)}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1">Gastos directos</p>
+                <p className="font-bold text-lg text-red-400">{formatCOP(totalGastos)}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1">Costo operación</p>
+                <p className="font-bold text-lg text-orange-400">{formatCOP(costoOperacion)}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1">Utilidad estimada</p>
+                <p className={`font-bold text-xl ${utilidadEstim >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCOP(utilidadEstim)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {flete > 0 ? `${((utilidadEstim / flete) * 100).toFixed(1)}%` : '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Observaciones */}
+        <div className="card p-5">
+          <label className="label">Observaciones</label>
+          <textarea {...register('observaciones')} rows={3}
+            placeholder="Notas adicionales del viaje..."
+            className="input resize-none" />
+        </div>
+
+        {/* Botones */}
+        <div className="flex gap-3 justify-end">
+          <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
+            Cancelar
+          </button>
+          <button type="submit" disabled={cargando} className="btn-primary px-8">
+            {cargando ? 'Guardando...' : 'Registrar viaje'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
