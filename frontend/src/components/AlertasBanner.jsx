@@ -1,17 +1,9 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, X, Bell } from 'lucide-react'
-import api from '../services/api'
+import { Bell, X } from 'lucide-react'
+import { useState } from 'react'
 
-export default function AlertasBanner() {
-  const [resumen, setResumen] = useState(null)
+export default function AlertasBanner({ resumen }) {
   const [cerrado, setCerrado] = useState(false)
-
-  useEffect(() => {
-    api.get('/alertas')
-      .then(r => setResumen(r.data.datos?.resumen))
-      .catch(() => {})
-  }, [])
 
   if (cerrado || !resumen || resumen.total === 0) return null
 
