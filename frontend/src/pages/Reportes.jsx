@@ -1,4 +1,4 @@
- import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area, RadarChart,
@@ -116,25 +116,26 @@ TOP CLIENTES (mes actual):
 ${datos.clientes?.slice(0,5).map(c => `- ${c.cliente}: ${c.total_viajes} viajes, Facturado ${formatCOP(c.total_facturado)}, Rentabilidad ${parseFloat(c.rentabilidad_promedio_pct||0).toFixed(1)}%`).join('\n') || 'Sin datos'}
 `
 
-      const GEMINI_KEY = 'AIzaSyBMzIZOvbq6yLi1o7DFP68SoVOOVIceLpQ'
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Eres un consultor financiero experto en empresas de transporte de carga en Colombia. Analiza estos datos de rentabilidad y dame 5 recomendaciones estratégicas concretas y accionables para mejorar la rentabilidad del negocio. Sé específico con los números. Responde en español, de forma clara y directa. Usa emojis para hacer la lectura más fácil.\n\n${resumen}`
-              }]
-            }],
-            generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
-          })
-        }
-      )
+      const GROQ_KEY = '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'
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{
+            role: 'user',
+            content: `Eres un consultor financiero experto en empresas de transporte de carga en Colombia. Analiza estos datos de rentabilidad y dame 5 recomendaciones estratégicas concretas y accionables para mejorar la rentabilidad del negocio. Sé específico con los números. Responde en español, de forma clara y directa. Usa emojis para hacer la lectura más fácil.\n\n${resumen}`
+          }],
+          max_tokens: 1000,
+          temperature: 0.7
+        })
+      })
 
       const data = await response.json()
-      const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudieron generar recomendaciones'
+      const texto = data.choices?.[0]?.message?.content || 'No se pudieron generar recomendaciones'
       setRecomendaciones(texto)
       setGenerado(true)
     } catch {
