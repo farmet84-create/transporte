@@ -1,4 +1,4 @@
- import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Truck, Users, UserCheck,
@@ -6,8 +6,6 @@ import {
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import api from '../../services/api'
-
-const LOGO = 'https://waappbusiness.com/wp-content/uploads/2026/01/cropped-walogo-blanco.png'
 
 export default function Layout() {
   const { usuario, logout } = useAuthStore()
@@ -26,35 +24,22 @@ export default function Layout() {
     }
   }, [oscuro])
 
-  // Cargar alertas al iniciar y programar recarga a las 11 PM cada día
   useEffect(() => {
     const cargarAlertas = () => {
       api.get('/alertas')
         .then(r => setNumAlertas(r.data.datos?.resumen?.total || 0))
         .catch(() => {})
     }
-
-    // Cargar al iniciar sesión
     cargarAlertas()
-
-    // Calcular ms hasta las 11 PM de hoy
     const ahora = new Date()
     const hoy11pm = new Date()
     hoy11pm.setHours(23, 0, 0, 0)
-
-    // Si ya pasaron las 11 PM de hoy, programar para mañana
     if (ahora > hoy11pm) hoy11pm.setDate(hoy11pm.getDate() + 1)
-
-    const msHasta11pm = hoy11pm - ahora
-
-    // Primer timeout hasta las 11 PM
     const timeout = setTimeout(() => {
       cargarAlertas()
-      // Luego repetir cada 24 horas
       const interval = setInterval(cargarAlertas, 24 * 60 * 60 * 1000)
       return () => clearInterval(interval)
-    }, msHasta11pm)
-
+    }, hoy11pm - ahora)
     return () => clearTimeout(timeout)
   }, [])
 
@@ -73,14 +58,10 @@ export default function Layout() {
   const Sidebar = ({ mobile = false }) => (
     <aside className={`flex flex-col h-full text-white ${mobile ? 'w-full' : 'w-64'}`}
       style={{ backgroundColor: '#090d1b' }}>
-
-      {/* Marca */}
       <div className="px-6 py-5 border-b border-white/10">
         <p className="font-bold text-lg tracking-tight">WaappLatam</p>
         <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Automating Growth</p>
       </div>
-
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {nav.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to}
@@ -94,8 +75,6 @@ export default function Layout() {
             {label}
           </NavLink>
         ))}
-
-        {/* Alertas con contador */}
         <NavLink to="/alertas"
           onClick={() => setSidebarOpen(false)}
           className={({ isActive }) =>
@@ -118,8 +97,6 @@ export default function Layout() {
             </span>
           )}
         </NavLink>
-
-        {/* Administración */}
         <NavLink to="/admin"
           onClick={() => setSidebarOpen(false)}
           className={({ isActive }) =>
@@ -131,8 +108,6 @@ export default function Layout() {
           Administración
         </NavLink>
       </nav>
-
-      {/* Usuario */}
       <div className="px-3 py-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-3 py-2 mb-1">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
@@ -170,29 +145,78 @@ export default function Layout() {
       )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b dark:bg-gray-900 dark:border-gray-700">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
-            <Menu className="w-5 h-5" />
+
+        {/* HEADER MÓVIL — fondo oscuro fijo, íconos blancos forzados */}
+        <header className="lg:hidden" style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 12px',
+          height: 54,
+          backgroundColor: '#090d1b',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          flexShrink: 0,
+          zIndex: 40,
+        }}>
+
+          {/* Hamburger */}
+          <button onClick={() => setSidebarOpen(true)} style={{
+            width: 40, height: 40,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(255,255,255,0.10)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: 10,
+            cursor: 'pointer',
+          }}>
+            <Menu style={{ width: 20, height: 20, color: '#ffffff' }} />
           </button>
-          <span className="font-semibold text-sm">WaappLatam</span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setOscuro(!oscuro)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300">
-              {oscuro ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+
+          {/* Título */}
+          <span style={{ fontWeight: 700, fontSize: 15, color: '#ffffff' }}>WaappLatam</span>
+
+          {/* Derecha */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => setOscuro(!oscuro)} style={{
+              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: 8,
+            }}>
+              {oscuro
+                ? <Sun style={{ width: 18, height: 18, color: '#ffffff' }} />
+                : <Moon style={{ width: 18, height: 18, color: '#ffffff' }} />}
             </button>
-            <div className="relative">
-              <NavLink to="/alertas">
-                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+
+            <div style={{ position: 'relative' }}>
+              <NavLink to="/alertas" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36 }}>
+                <Bell style={{ width: 18, height: 18, color: '#ffffff' }} />
                 {numAlertas > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  <span style={{
+                    position: 'absolute', top: 4, right: 4,
+                    background: '#ef4444', color: '#fff',
+                    fontSize: 9, fontWeight: 700, borderRadius: '50%',
+                    width: 15, height: 15,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1.5px solid #090d1b',
+                  }}>
                     {numAlertas > 9 ? '9+' : numAlertas}
                   </span>
                 )}
               </NavLink>
             </div>
+
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: '#1e2a4a', border: '1.5px solid rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 700, color: '#ffffff',
+            }}>
+              {usuario?.nombre?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6"><Outlet /></main>
+
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <Outlet />
+        </main>
       </div>
     </div>
   )
