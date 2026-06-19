@@ -116,7 +116,7 @@ TOP CLIENTES (mes actual):
 ${datos.clientes?.slice(0,5).map(c => `- ${c.cliente}: ${c.total_viajes} viajes, Facturado ${formatCOP(c.total_facturado)}, Rentabilidad ${parseFloat(c.rentabilidad_promedio_pct||0).toFixed(1)}%`).join('\n') || 'Sin datos'}
 `
 
-      const GEMINI_KEY = 'AIzaSyAQ-Ab8RN6JXFSMo9JIR-bDaLDLUYvc_z_VmP_oPNWSAW8nYQGRCqw'
+      const GEMINI_KEY = 'AIzaSyBMzIZOvbq6yLi1o7DFP68SoVOOVIceLpQ'
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
         {
