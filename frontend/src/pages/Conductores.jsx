@@ -1,452 +1,319 @@
-'use strict';
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Search, UserCheck, Edit2, Trash2, X, Save } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { conductoresAPI } from '../services/api'
+import { formatCOP, formatFecha } from '../utils/format'
 
-const { pool } = require('../config/database');
-const {
-  ok, error, nuevoUuid, paginar, respuestaPaginada,
-  registrarAuditoria, generarNumeroViaje
-} = require('../utils/helpers');
+const TIPOS_DOC = ['CC','CE','PA','NIT','TI']
+const TIPOS_CONTRATO = ['indefinido','fijo','prestacion_servicios','otro']
 
-// GET /api/viajes
-async function listar(req, res, next) {
-  try {
-    const empresaId = req.usuario.empresa_id;
-    const { pagina, limite, offset } = paginar(req.query);
-    const { placa, conductor_id, cliente_id, estado, fecha_inicio, fecha_fin } = req.query;
-
-    let joins  = `INNER JOIN vehiculos  vh ON vh.id = v.vehiculo_id
-                  INNER JOIN conductores c  ON c.id  = v.conductor_id
-                  INNER JOIN clientes   cl ON cl.id  = v.cliente_id`;
-    let where  = `WHERE v.empresa_id = ? AND v.eliminado_en IS NULL`;
-    const params = [empresaId];
-
-    if (placa)        { where += ' AND vh.placa LIKE ?';     params.push(`%${placa.toUpperCase()}%`); }
-    if (conductor_id) { where += ' AND v.conductor_id = ?';  params.push(conductor_id); }
-    if (cliente_id)   { where += ' AND v.cliente_id = ?';    params.push(cliente_id); }
-    if (estado)       { where += ' AND v.estado = ?';        params.push(estado); }
-    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?'; params.push(fecha_inicio); }
-    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?'; params.push(fecha_fin); }
-
-    const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM viajes v ${joins} ${where}`, params
-    );
-
-    const [rows] = await pool.query(
-      `SELECT v.id, v.uuid, v.numero_viaje, v.fecha_salida, v.hora_salida,
-          v.fecha_llegada, v.hora_llegada, v.km_recorridos,
-          v.origen, v.destino, v.estado,
-          v.numero_manifiesto, v.tipo_carga, v.peso_carga_kg,
-          v.valor_manifiesto, v.anticipo, v.descuento_manifiesto, v.saldo_manifiesto,
-          v.valor_flete_cobrado, v.total_ingresos, v.total_costos,
-          v.utilidad_bruta, v.utilidad_neta, v.rentabilidad_pct,
-          v.facturado, v.creado_en,
-          vh.placa, vh.marca, vh.modelo,
-          CONCAT(c.nombres,' ',c.apellidos) AS conductor,
-          cl.razon_social AS cliente
-       FROM viajes v ${joins} ${where}
-       ORDER BY v.fecha_salida DESC, v.id DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limite, offset]
-    );
-
-    return respuestaPaginada(res, rows, total, pagina, limite);
-  } catch (err) { next(err); }
+const FORM_INICIAL = {
+  nombres:'', apellidos:'', tipo_documento:'CC', numero_documento:'',
+  telefono:'', email:'', direccion:'', ciudad:'',
+  numero_licencia:'', categoria_licencia:'', vencimiento_licencia:'',
+  fecha_ingreso:'', tipo_contrato:'indefinido',
+  salario_base:'', auxilio_transporte:'', observaciones:''
 }
 
-// GET /api/viajes/:id
-async function obtener(req, res, next) {
-  try {
-    const [rows] = await pool.query(
-      `SELECT v.*,
-          vh.placa, vh.marca, vh.modelo, vh.tipo AS tipo_vehiculo,
-          vh.rendimiento_km_galon,
-          CONCAT(c.nombres,' ',c.apellidos) AS conductor,
-          c.numero_documento, c.telefono AS telefono_conductor,
-          cl.razon_social AS nombre_cliente, cl.nit AS nit_cliente,
-          r.nombre AS ruta_nombre
-       FROM viajes v
-       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores  c ON c.id  = v.conductor_id
-       INNER JOIN clientes    cl ON cl.id = v.cliente_id
-       LEFT  JOIN rutas        r ON r.id  = v.ruta_id
-       WHERE v.id = ? AND v.empresa_id = ? AND v.eliminado_en IS NULL`,
-      [req.params.id, req.usuario.empresa_id]
-    );
-
-    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-
-    const [gastos] = await pool.query(
-      `SELECT id, categoria, descripcion, valor, cantidad, unidad, proveedor, fecha
-       FROM gastos_viaje
-       WHERE viaje_id = ? AND eliminado_en IS NULL
-       ORDER BY categoria, fecha`,
-      [req.params.id]
-    );
-
-    const [combustible] = await pool.query(
-      `SELECT id, uuid, nombre_estacion, km_inicial, km_final, km_recorridos,
-              valor_galon, rendimiento_km_galon, galones_gastados, valor_total, fecha, observaciones
-       FROM combustible_viaje
-       WHERE viaje_id = ? AND eliminado_en IS NULL
-       ORDER BY fecha, id`,
-      [req.params.id]
-    );
-
-    // Lista de clientes para permitir cambio en edición
-    const [clientes] = await pool.query(
-      `SELECT id, razon_social, nit FROM clientes
-       WHERE empresa_id = ? AND eliminado_en IS NULL AND activo = 1
-       ORDER BY razon_social`,
-      [req.usuario.empresa_id]
-    );
-
-    return ok(res, { ...rows[0], gastos, combustible, clientes });
-  } catch (err) { next(err); }
+function Modal({ titulo, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-semibold text-gray-900">{titulo}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  )
 }
 
-// POST /api/viajes
-async function crear(req, res, next) {
-  try {
-    const empresaId = req.usuario.empresa_id;
-    const {
-      vehiculo_id, conductor_id, cliente_id, ruta_id,
-      origen, destino, fecha_salida, hora_salida, fecha_llegada, hora_llegada,
-      km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-      valor_manifiesto, anticipo, descuento_manifiesto,
-      valor_flete_cobrado, otros_ingresos, observaciones
-    } = req.body;
+function FormConductor({ inicial, onGuardar, onCancelar, cargando }) {
+  const [form, setForm] = useState(inicial || FORM_INICIAL)
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-    const anio = new Date(fecha_salida).getFullYear();
-    const mes  = new Date(fecha_salida).getMonth() + 1;
-
-    const [[costoOp]]    = await pool.query(
-      `SELECT COALESCE(costo_por_km, 0) AS costo_por_km FROM costos_operacion_mensual
-       WHERE vehiculo_id = ? AND anio = ? AND mes = ?`,
-      [vehiculo_id, anio, mes]
-    );
-    const [[costoAdmin]] = await pool.query(
-      `SELECT COALESCE(costo_por_viaje, 0) AS costo_por_viaje FROM costos_administrativos_mensual
-       WHERE empresa_id = ? AND anio = ? AND mes = ?`,
-      [empresaId, anio, mes]
-    );
-
-    const costoKm         = parseFloat(costoOp?.costo_por_km    || 0);
-    const costoAdminViaje = parseFloat(costoAdmin?.costo_por_viaje || 0);
-    const kmNum           = parseFloat(km_recorridos || 0);
-    const uuid            = nuevoUuid();
-    const numeroViaje     = await generarNumeroViaje(empresaId);
-
-    const [result] = await pool.query(
-      `INSERT INTO viajes (
-          uuid, empresa_id, numero_viaje,
-          vehiculo_id, conductor_id, cliente_id, ruta_id,
-          origen, destino, fecha_salida, hora_salida, fecha_llegada, hora_llegada,
-          km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-          valor_manifiesto, anticipo, descuento_manifiesto,
-          valor_flete_cobrado, otros_ingresos,
-          total_gastos_directos, costo_km_aplicado, total_costo_operacion_km,
-          costo_admin_aplicado, estado, creado_por
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
-      [
-        uuid, empresaId, numeroViaje,
-        vehiculo_id, conductor_id, cliente_id, ruta_id || null,
-        origen, destino, fecha_salida, hora_salida, fecha_llegada || null, hora_llegada || null,
-        kmNum, numero_manifiesto || null, fecha_manifiesto || null,
-        tipo_carga || null, peso_carga_kg || null,
-        parseFloat(valor_manifiesto || 0),
-        parseFloat(anticipo || 0),
-        parseFloat(descuento_manifiesto || 0),
-        parseFloat(valor_flete_cobrado || 0),
-        parseFloat(otros_ingresos || 0),
-        costoKm, kmNum * costoKm, costoAdminViaje, 'programado', req.usuario.id
-      ]
-    );
-
-    const [nuevo] = await pool.query(
-      `SELECT v.*, vh.placa, CONCAT(c.nombres,' ',c.apellidos) AS conductor,
-              cl.razon_social AS cliente
-       FROM viajes v
-       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores  c ON c.id  = v.conductor_id
-       INNER JOIN clientes    cl ON cl.id = v.cliente_id
-       WHERE v.id = ?`, [result.insertId]
-    );
-
-    return ok(res, nuevo[0], 'Viaje registrado correctamente', 201);
-  } catch (err) { next(err); }
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label">Nombres *</label>
+          <input value={form.nombres} onChange={e => set('nombres', e.target.value)} className="input" placeholder="Juan Carlos" />
+        </div>
+        <div>
+          <label className="label">Apellidos *</label>
+          <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} className="input" placeholder="Pérez García" />
+        </div>
+        <div>
+          <label className="label">Tipo documento</label>
+          <select value={form.tipo_documento} onChange={e => set('tipo_documento', e.target.value)} className="input">
+            {TIPOS_DOC.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Número documento *</label>
+          <input value={form.numero_documento} onChange={e => set('numero_documento', e.target.value)} className="input" placeholder="12345678" />
+        </div>
+        <div>
+          <label className="label">Teléfono</label>
+          <input value={form.telefono} onChange={e => set('telefono', e.target.value)} className="input" placeholder="3001234567" />
+        </div>
+        <div>
+          <label className="label">Email</label>
+          <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="label">Ciudad</label>
+          <input value={form.ciudad} onChange={e => set('ciudad', e.target.value)} className="input" placeholder="Bogotá" />
+        </div>
+        <div>
+          <label className="label">Dirección</label>
+          <input value={form.direccion} onChange={e => set('direccion', e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="label">N° Licencia</label>
+          <input value={form.numero_licencia} onChange={e => set('numero_licencia', e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="label">Categoría licencia</label>
+          <input value={form.categoria_licencia} onChange={e => set('categoria_licencia', e.target.value)} className="input" placeholder="C2, C3..." />
+        </div>
+        <div>
+          <label className="label">Vencimiento licencia</label>
+          <input type="date" value={form.vencimiento_licencia} onChange={e => set('vencimiento_licencia', e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="label">Fecha ingreso</label>
+          <input type="date" value={form.fecha_ingreso} onChange={e => set('fecha_ingreso', e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="label">Tipo contrato</label>
+          <select value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)} className="input">
+            {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Salario base</label>
+          <input type="number" value={form.salario_base} onChange={e => set('salario_base', e.target.value)} className="input" placeholder="3000000" />
+        </div>
+        <div>
+          <label className="label">Auxilio transporte</label>
+          <input type="number" value={form.auxilio_transporte} onChange={e => set('auxilio_transporte', e.target.value)} className="input" placeholder="200000" />
+        </div>
+      </div>
+      <div>
+        <label className="label">Observaciones</label>
+        <textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} className="input resize-none" />
+      </div>
+      <div className="flex gap-3 justify-end pt-2">
+        <button onClick={onCancelar} className="btn-secondary">Cancelar</button>
+        <button onClick={() => onGuardar(form)} disabled={cargando} className="btn-primary flex items-center gap-2">
+          <Save className="w-4 h-4" />
+          {cargando ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
-// PUT /api/viajes/:id — actualizar datos completos del viaje
-async function actualizar(req, res, next) {
-  try {
-    const { id } = req.params;
-    const empresaId = req.usuario.empresa_id;
+export default function Conductores() {
+  const [conductores, setConductores] = useState([])
+  const [total, setTotal]             = useState(0)
+  const [cargando, setCargando]       = useState(true)
+  const [guardando, setGuardando]     = useState(false)
+  const [busqueda, setBusqueda]       = useState('')
+  const [modal, setModal]             = useState(null)
 
-    const [antes] = await pool.query(
-      `SELECT * FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
-      [id, empresaId]
-    );
-    if (!antes.length) return error(res, 'Viaje no encontrado', 404);
-
-    const {
-      cliente_id, origen, destino, fecha_salida, hora_salida,
-      fecha_llegada, hora_llegada, km_recorridos,
-      numero_manifiesto, fecha_manifiesto, tipo_carga,
-      peso_carga_kg, valor_manifiesto, anticipo, descuento_manifiesto,
-      valor_flete_cobrado, otros_ingresos, observaciones
-    } = req.body;
-
-    const kmNum = parseFloat(km_recorridos || antes[0].km_recorridos);
-
-    await pool.query(
-      `UPDATE viajes SET
-        cliente_id = ?,
-        origen = ?, destino = ?,
-        fecha_salida = ?, hora_salida = ?,
-        fecha_llegada = ?, hora_llegada = ?,
-        km_recorridos = ?,
-        total_costo_operacion_km = ? * costo_km_aplicado,
-        numero_manifiesto = ?, fecha_manifiesto = ?,
-        tipo_carga = ?, peso_carga_kg = ?,
-        valor_manifiesto = ?,
-        anticipo = ?,
-        descuento_manifiesto = ?,
-        valor_flete_cobrado = ?,
-        otros_ingresos = ?,
-        observaciones = ?,
-        actualizado_en = NOW(), actualizado_por = ?
-       WHERE id = ? AND empresa_id = ?`,
-      [
-        cliente_id            || antes[0].cliente_id,
-        origen                || antes[0].origen,
-        destino               || antes[0].destino,
-        fecha_salida          || antes[0].fecha_salida,
-        hora_salida           || antes[0].hora_salida,
-        fecha_llegada         || null,
-        hora_llegada          || null,
-        kmNum, kmNum,
-        numero_manifiesto     || null,
-        fecha_manifiesto      || null,
-        tipo_carga            || null,
-        parseFloat(peso_carga_kg        || 0) || null,
-        parseFloat(valor_manifiesto     || 0),
-        parseFloat(anticipo             || 0),
-        parseFloat(descuento_manifiesto || 0),
-        parseFloat(valor_flete_cobrado  || 0),
-        parseFloat(otros_ingresos       || 0),
-        observaciones || null,
-        req.usuario.id, id, empresaId
-      ]
-    );
-
-    const [actualizado] = await pool.query(
-      `SELECT v.*, vh.placa, CONCAT(c.nombres,' ',c.apellidos) AS conductor,
-              cl.razon_social AS nombre_cliente
-       FROM viajes v
-       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores  c ON c.id  = v.conductor_id
-       INNER JOIN clientes    cl ON cl.id = v.cliente_id
-       WHERE v.id = ?`, [id]
-    );
-
-    return ok(res, actualizado[0], 'Viaje actualizado');
-  } catch (err) { next(err); }
-}
-
-// PUT /api/viajes/:id/estado
-async function cambiarEstado(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const empresaId = req.usuario.empresa_id;
-
-    const estadosValidos = ['programado','en_curso','completado','cancelado','liquidado'];
-    if (!estadosValidos.includes(estado))
-      return error(res, `Estado inválido`, 400);
-
-    const [rows] = await pool.query(
-      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
-      [id, empresaId]
-    );
-    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-
-    await pool.query(
-      `UPDATE viajes SET estado = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id = ?`,
-      [estado, req.usuario.id, id]
-    );
-
-    if (estado === 'completado') {
-      const [viajeData] = await pool.query(`SELECT fecha_salida FROM viajes WHERE id = ?`, [id]);
-      const anio = new Date(viajeData[0].fecha_salida).getFullYear();
-      const mes  = new Date(viajeData[0].fecha_salida).getMonth() + 1;
-      await pool.query(
-        `UPDATE costos_administrativos_mensual
-         SET total_viajes_mes = (
-           SELECT COUNT(*) FROM viajes
-           WHERE empresa_id = ? AND YEAR(fecha_salida) = ? AND MONTH(fecha_salida) = ?
-           AND estado = 'completado' AND eliminado_en IS NULL
-         )
-         WHERE empresa_id = ? AND anio = ? AND mes = ?`,
-        [empresaId, anio, mes, empresaId, anio, mes]
-      );
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    try {
+      const res = await conductoresAPI.listar({ limite: 100 })
+      const datos = res.data.datos || []
+      const filtrados = busqueda
+        ? datos.filter(c => `${c.nombres} ${c.apellidos} ${c.numero_documento}`.toLowerCase().includes(busqueda.toLowerCase()))
+        : datos
+      setConductores(filtrados)
+      setTotal(res.data.paginacion?.total || datos.length)
+    } catch {
+      toast.error('Error cargando conductores')
+    } finally {
+      setCargando(false)
     }
+  }, [busqueda])
 
-    return ok(res, { id, estado }, 'Estado actualizado');
-  } catch (err) { next(err); }
+  useEffect(() => { cargar() }, [cargar])
+
+  const guardarNuevo = async (form) => {
+    if (!form.nombres || !form.apellidos || !form.numero_documento) {
+      toast.error('Nombres, apellidos y documento son requeridos')
+      return
+    }
+    setGuardando(true)
+    try {
+      await conductoresAPI.crear(form)
+      toast.success('Conductor creado correctamente')
+      setModal(null)
+      cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || 'Error al crear conductor')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const guardarEdicion = async (form) => {
+    setGuardando(true)
+    try {
+      await conductoresAPI.actualizar(modal.id, {
+        nombres:              form.nombres,
+        apellidos:            form.apellidos,
+        tipo_documento:       form.tipo_documento,
+        telefono:             form.telefono || null,
+        email:                form.email || null,
+        ciudad:               form.ciudad || null,
+        direccion:            form.direccion || null,
+        numero_licencia:      form.numero_licencia || null,
+        categoria_licencia:   form.categoria_licencia || null,
+        vencimiento_licencia: form.vencimiento_licencia || null,
+        fecha_ingreso:        form.fecha_ingreso || null,
+        tipo_contrato:        form.tipo_contrato || null,
+        salario_base:         parseFloat(form.salario_base || 0),
+        auxilio_transporte:   parseFloat(form.auxilio_transporte || 0),
+        observaciones:        form.observaciones || null
+      })
+      toast.success('Conductor actualizado')
+      setModal(null)
+      cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || 'Error al actualizar')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const eliminar = async (c) => {
+    if (!confirm(`¿Eliminar al conductor ${c.nombres} ${c.apellidos}?`)) return
+    try {
+      await conductoresAPI.eliminar(c.id)
+      toast.success('Conductor eliminado')
+      cargar()
+    } catch {
+      toast.error('Error al eliminar')
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Conductores</h1>
+          <p className="text-gray-500 text-sm">{total} conductores registrados</p>
+        </div>
+        <button onClick={() => setModal('nuevo')} className="btn-primary flex items-center gap-2 text-sm">
+          <Plus className="w-4 h-4" /> Nuevo conductor
+        </button>
+      </div>
+
+      <div className="card p-4">
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o documento..."
+              className="input pl-9" />
+          </div>
+          {busqueda && (
+            <button onClick={() => setBusqueda('')} className="btn-secondary text-sm">Limpiar</button>
+          )}
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b">
+                <th className="px-5 py-3 text-left font-medium">Conductor</th>
+                <th className="px-5 py-3 text-left font-medium">Documento</th>
+                <th className="px-5 py-3 text-left font-medium">Teléfono</th>
+                <th className="px-5 py-3 text-left font-medium">Licencia</th>
+                <th className="px-5 py-3 text-left font-medium">Vencimiento</th>
+                <th className="px-5 py-3 text-right font-medium">Salario</th>
+                <th className="px-5 py-3 text-center font-medium">Estado</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {cargando ? (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                  <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-2" />
+                  Cargando...
+                </td></tr>
+              ) : conductores.length === 0 ? (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                  No hay conductores.{' '}
+                  <button onClick={() => setModal('nuevo')} className="text-primary-600 hover:underline">
+                    Agregar el primero
+                  </button>
+                </td></tr>
+              ) : conductores.map(c => (
+                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-gray-900">{c.nombres} {c.apellidos}</p>
+                    <p className="text-gray-400 text-xs">{c.ciudad || '—'}</p>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    <span className="text-xs text-gray-400">{c.tipo_documento} </span>
+                    {c.numero_documento}
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">{c.telefono || '—'}</td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {c.numero_licencia || '—'}
+                    {c.categoria_licencia && <span className="ml-1 badge-blue">{c.categoria_licencia}</span>}
+                  </td>
+                  <td className="px-5 py-3">
+                    {c.vencimiento_licencia ? (
+                      <span className={new Date(c.vencimiento_licencia) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600'}>
+                        {formatFecha(c.vencimiento_licencia)}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-5 py-3 text-right text-gray-600">{formatCOP(c.salario_base)}</td>
+                  <td className="px-5 py-3 text-center">
+                    <span className={c.activo ? 'badge-green' : 'badge-red'}>
+                      {c.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2 justify-end">
+                      <button onClick={() => setModal(c)}
+                        className="p-1.5 rounded-lg hover:bg-primary-50 text-primary-600 transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => eliminar(c)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modal === 'nuevo' && (
+        <Modal titulo="Nuevo conductor" onClose={() => setModal(null)}>
+          <FormConductor onGuardar={guardarNuevo} onCancelar={() => setModal(null)} cargando={guardando} />
+        </Modal>
+      )}
+      {modal && modal !== 'nuevo' && (
+        <Modal titulo={`Editar — ${modal.nombres} ${modal.apellidos}`} onClose={() => setModal(null)}>
+          <FormConductor inicial={modal} onGuardar={guardarEdicion} onCancelar={() => setModal(null)} cargando={guardando} />
+        </Modal>
+      )}
+    </div>
+  )
 }
-
-// POST /api/viajes/:id/gastos
-async function agregarGasto(req, res, next) {
-  try {
-    const viajeId   = req.params.id;
-    const empresaId = req.usuario.empresa_id;
-    const { categoria, descripcion, valor, cantidad, unidad, proveedor, fecha } = req.body;
-
-    const [viaje] = await pool.query(
-      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
-      [viajeId, empresaId]
-    );
-    if (!viaje.length) return error(res, 'Viaje no encontrado', 404);
-
-    const uuid = nuevoUuid();
-    const [result] = await pool.query(
-      `INSERT INTO gastos_viaje
-        (uuid, empresa_id, viaje_id, categoria, descripcion, valor, cantidad, unidad, proveedor, fecha, creado_por)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [uuid, empresaId, viajeId, categoria, descripcion || null,
-       parseFloat(valor), parseFloat(cantidad || 1), unidad || null,
-       proveedor || null, fecha, req.usuario.id]
-    );
-
-    await recalcularGastosDirectos(viajeId);
-    const [nuevo] = await pool.query(`SELECT * FROM gastos_viaje WHERE id = ?`, [result.insertId]);
-    return ok(res, nuevo[0], 'Gasto registrado', 201);
-  } catch (err) { next(err); }
-}
-
-// DELETE /api/viajes/:id/gastos/:gastoId
-async function eliminarGasto(req, res, next) {
-  try {
-    const { id: viajeId, gastoId } = req.params;
-    await pool.query(
-      `UPDATE gastos_viaje SET eliminado_en = NOW() WHERE id = ? AND viaje_id = ?`,
-      [gastoId, viajeId]
-    );
-    await recalcularGastosDirectos(viajeId);
-    return ok(res, null, 'Gasto eliminado');
-  } catch (err) { next(err); }
-}
-
-// POST /api/viajes/:id/combustible
-async function agregarCombustible(req, res, next) {
-  try {
-    const viajeId   = req.params.id;
-    const empresaId = req.usuario.empresa_id;
-    const { nombre_estacion, km_inicial, km_final, valor_galon, fecha, observaciones } = req.body;
-
-    const [viajeData] = await pool.query(
-      `SELECT v.vehiculo_id, vh.rendimiento_km_galon
-       FROM viajes v
-       INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
-       WHERE v.id = ? AND v.empresa_id = ?`,
-      [viajeId, empresaId]
-    );
-    if (!viajeData.length) return error(res, 'Viaje no encontrado', 404);
-
-    const rendimiento = parseFloat(viajeData[0].rendimiento_km_galon || 0);
-    if (rendimiento === 0)
-      return error(res, 'El vehículo no tiene rendimiento km/galón. Actualízalo primero en Vehículos.', 400);
-
-    const uuid = nuevoUuid();
-    const [result] = await pool.query(
-      `INSERT INTO combustible_viaje
-        (uuid, empresa_id, viaje_id, nombre_estacion, km_inicial, km_final,
-         valor_galon, rendimiento_km_galon, fecha, observaciones, creado_por)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [uuid, empresaId, viajeId, nombre_estacion,
-       parseFloat(km_inicial), parseFloat(km_final),
-       parseFloat(valor_galon), rendimiento,
-       fecha, observaciones || null, req.usuario.id]
-    );
-
-    const [nuevo] = await pool.query(
-      `SELECT * FROM combustible_viaje WHERE id = ?`, [result.insertId]
-    );
-    return ok(res, nuevo[0], 'Carga de combustible registrada', 201);
-  } catch (err) { next(err); }
-}
-
-// DELETE /api/viajes/:id/combustible/:cId
-async function eliminarCombustible(req, res, next) {
-  try {
-    const { id: viajeId, cId } = req.params;
-    await pool.query(
-      `UPDATE combustible_viaje SET eliminado_en = NOW() WHERE id = ? AND viaje_id = ?`,
-      [cId, viajeId]
-    );
-    return ok(res, null, 'Registro eliminado');
-  } catch (err) { next(err); }
-}
-
-// DELETE /api/viajes/:id
-async function eliminarViaje(req, res, next) {
-  try {
-    const { id } = req.params;
-    const empresaId = req.usuario.empresa_id;
-    const [rows] = await pool.query(
-      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
-      [id, empresaId]
-    );
-    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-    await pool.query(
-      `UPDATE viajes SET eliminado_en = NOW(), actualizado_por = ? WHERE id = ?`,
-      [req.usuario.id, id]
-    );
-    return ok(res, null, 'Viaje eliminado');
-  } catch (err) { next(err); }
-}
-
-async function recalcularGastosDirectos(viajeId) {
-  await pool.query(
-    `UPDATE viajes
-     SET total_gastos_directos = (
-       SELECT COALESCE(SUM(valor), 0) FROM gastos_viaje
-       WHERE viaje_id = ? AND eliminado_en IS NULL
-     ), actualizado_en = NOW()
-     WHERE id = ?`,
-    [viajeId, viajeId]
-  );
-}
-
-// GET /api/viajes/:id/rentabilidad
-async function rentabilidad(req, res, next) {
-  try {
-    const [rows] = await pool.query(
-      `SELECT v.numero_viaje, v.fecha_salida, v.origen, v.destino,
-          v.km_recorridos, vh.placa,
-          v.valor_manifiesto, v.anticipo, v.descuento_manifiesto, v.saldo_manifiesto,
-          v.valor_flete_cobrado, v.total_ingresos,
-          v.total_gastos_directos   AS bloque1_gastos_directos,
-          v.costo_km_aplicado,
-          v.total_costo_operacion_km AS bloque2_costo_operacion,
-          v.costo_admin_aplicado    AS bloque3_costo_admin,
-          v.total_costos, v.utilidad_bruta, v.utilidad_neta, v.rentabilidad_pct,
-          CONCAT(c.nombres,' ',c.apellidos) AS conductor,
-          cl.razon_social AS cliente
-       FROM viajes v
-       INNER JOIN vehiculos   vh ON vh.id = v.vehiculo_id
-       INNER JOIN conductores  c ON c.id  = v.conductor_id
-       INNER JOIN clientes    cl ON cl.id = v.cliente_id
-       WHERE v.id = ? AND v.empresa_id = ?`,
-      [req.params.id, req.usuario.empresa_id]
-    );
-    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
-    return ok(res, rows[0]);
-  } catch (err) { next(err); }
-}
-
-module.exports = {
-  listar, obtener, crear, actualizar, cambiarEstado,
-  agregarGasto, eliminarGasto,
-  agregarCombustible, eliminarCombustible,
-  rentabilidad, eliminarViaje
-};
