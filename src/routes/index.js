@@ -19,12 +19,11 @@ router.get ('/auth/me',               autenticar, auth.perfil);
 router.put ('/auth/cambiar-password', autenticar, auth.cambiarPassword);
 
 // ─── VEHÍCULOS ───────────────────────────────────────────
-router.get   ('/vehiculos',              autenticar, vehiculos.listar);
-router.get   ('/vehiculos/:id',          autenticar, vehiculos.obtener);
-router.get   ('/vehiculos/:id/costo-km', autenticar, vehiculos.costoKmActual);
-router.post  ('/vehiculos',              autenticar, autorizar('admin','operador'), vehiculos.crear);
-router.put   ('/vehiculos/:id',          autenticar, autorizar('admin','operador'), vehiculos.actualizar);
-router.delete('/vehiculos/:id',          autenticar, autorizar('admin'), vehiculos.eliminar);
+router.get   ('/vehiculos',     autenticar, vehiculos.listar);
+router.get   ('/vehiculos/:id', autenticar, vehiculos.obtener);
+router.post  ('/vehiculos',     autenticar, autorizar('admin','operador'), vehiculos.crear);
+router.put   ('/vehiculos/:id', autenticar, autorizar('admin','operador'), vehiculos.actualizar);
+router.delete('/vehiculos/:id', autenticar, autorizar('admin'), vehiculos.eliminar);
 
 // ─── CONDUCTORES ─────────────────────────────────────────
 router.get('/conductores', autenticar, async (req, res, next) => {
@@ -176,17 +175,17 @@ router.delete('/clientes/:id', autenticar, autorizar('admin'), async (req, res, 
 });
 
 // ─── VIAJES ──────────────────────────────────────────────
-router.get   ('/viajes',                     autenticar, viajes.listar);
-router.get   ('/viajes/:id',                 autenticar, viajes.obtener);
-router.get   ('/viajes/:id/rentabilidad',    autenticar, viajes.rentabilidad);
-router.post  ('/viajes',                     autenticar, autorizar('admin','operador'), viajes.crear);
-router.put   ('/viajes/:id',                 autenticar, autorizar('admin','operador'), viajes.actualizar);
-router.put   ('/viajes/:id/estado',          autenticar, autorizar('admin','operador'), viajes.cambiarEstado);
-router.post  ('/viajes/:id/gastos',          autenticar, autorizar('admin','operador'), viajes.agregarGasto);
-router.delete('/viajes/:id/gastos/:gastoId',       autenticar, autorizar('admin','operador'), viajes.eliminarGasto);
-router.post  ('/viajes/:id/combustible',          autenticar, autorizar('admin','operador'), viajes.agregarCombustible);
-router.delete('/viajes/:id/combustible/:cId',     autenticar, autorizar('admin','operador'), viajes.eliminarCombustible);
-router.delete('/viajes/:id',                      autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
+router.get   ('/viajes',                       autenticar, viajes.listar);
+router.get   ('/viajes/:id',                   autenticar, viajes.obtener);
+router.get   ('/viajes/:id/rentabilidad',      autenticar, viajes.rentabilidad);
+router.post  ('/viajes',                       autenticar, autorizar('admin','operador'), viajes.crear);
+router.put   ('/viajes/:id',                   autenticar, autorizar('admin','operador'), viajes.actualizar);
+router.put   ('/viajes/:id/estado',            autenticar, autorizar('admin','operador'), viajes.cambiarEstado);
+router.post  ('/viajes/:id/gastos',            autenticar, autorizar('admin','operador'), viajes.agregarGasto);
+router.delete('/viajes/:id/gastos/:gastoId',   autenticar, autorizar('admin','operador'), viajes.eliminarGasto);
+router.post  ('/viajes/:id/combustible',       autenticar, autorizar('admin','operador'), viajes.agregarCombustible);
+router.delete('/viajes/:id/combustible/:cId',  autenticar, autorizar('admin','operador'), viajes.eliminarCombustible);
+router.delete('/viajes/:id',                   autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
 
 // ─── COSTOS ──────────────────────────────────────────────
 router.get ('/costos/operacion',       autenticar, costos.listarOperacion);
