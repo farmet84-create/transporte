@@ -1,4 +1,4 @@
- import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { DollarSign, TrendingUp, Truck, BarChart2, Search, X, Filter } from 'lucide-react'
 import { reportesAPI, viajesAPI, vehiculosAPI, conductoresAPI, clientesAPI } from '../services/api'
+import api from '../services/api'
 import { formatCOP, formatPct, formatFecha, colorRentabilidad, badgeEstado, labelEstado } from '../utils/format'
 import toast from 'react-hot-toast'
 import AlertasBanner from '../components/AlertasBanner'
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [evolucion, setEvolucion] = useState([])
   const [viajes, setViajes]       = useState([])
   const [topVehiculos, setTopVehiculos] = useState([])
+  const [resumenAlertas, setResumenAlertas] = useState(null)
   const [cargando, setCargando]   = useState(true)
 
   const [vehiculos, setVehiculos]     = useState([])
@@ -71,7 +73,7 @@ export default function Dashboard() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [resKpis, resEvol, resViajes, resTop] = await Promise.all([
+      const [resKpis, resEvol, resViajes, resTop, resAlertas] = await Promise.all([
         reportesAPI.dashboard({ anio, mes }),
         reportesAPI.evolucionMensual({ anio }),
         viajesAPI.listar({
@@ -79,6 +81,7 @@ export default function Dashboard() {
           ...filtros,
         }),
         reportesAPI.porVehiculo({ anio, mes }),
+        api.get('/alertas'),
       ])
       setKpis(resKpis.data.datos?.kpis || null)
       setEvolucion(resEvol.data.datos || [])
@@ -130,7 +133,7 @@ export default function Dashboard() {
       </div>
 
       {/* Banner de alertas */}
-      <AlertasBanner />
+      <AlertasBanner resumen={resumenAlertas} />
 
       {/* Panel de filtros */}
       {mostrarFiltros && (
