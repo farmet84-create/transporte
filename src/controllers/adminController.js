@@ -9,7 +9,9 @@ async function listarUsuarios(req, res, next) {
   try {
     const empresaId = req.usuario.empresa_id;
     const [rows] = await pool.query(
-      `SELECT id, uuid, nombre, apellido, email, rol, activo, ultimo_acceso, creado_en
+      `SELECT id, uuid, nombre, apellido, email, rol, activo,
+              DATE_FORMAT(ultimo_acceso, '%Y-%m-%d %H:%i') AS ultimo_acceso,
+              creado_en
        FROM usuarios
        WHERE empresa_id = ? AND eliminado_en IS NULL
        ORDER BY nombre ASC`,
