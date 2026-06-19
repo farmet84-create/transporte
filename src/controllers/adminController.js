@@ -42,9 +42,9 @@ async function crearUsuario(req, res, next) {
     const uuid = nuevoUuid();
 
     const [result] = await pool.query(
-      `INSERT INTO usuarios (uuid, empresa_id, nombre, apellido, email, password_hash, rol, creado_por)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [uuid, empresaId, nombre, apellido || '', email, hash, rol, req.usuario.id]
+      `INSERT INTO usuarios (uuid, empresa_id, nombre, apellido, email, password_hash, rol)
+       VALUES (?,?,?,?,?,?,?)`,
+      [uuid, empresaId, nombre, apellido || '', email, hash, rol]
     );
 
     const [nuevo] = await pool.query(
@@ -106,8 +106,14 @@ async function listarAuditoria(req, res, next) {
     let where = 'WHERE a.empresa_id = ?';
     const params = [empresaId];
 
-    if (usuario) { where += ' AND (u.nombre LIKE ? OR u.email LIKE ?)'; params.push(`%${usuario}%`, `%${usuario}%`); }
-    if (accion)  { where += ' AND a.accion = ?'; params.push(accion); }
+    if (usuario) {
+      where += ' AND (u.nombre LIKE ? OR u.email LIKE ?)';
+      params.push(`%${usuario}%`, `%${usuario}%`);
+    }
+    if (accion) {
+      where += ' AND a.accion = ?';
+      params.push(accion);
+    }
 
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total FROM auditoria a
@@ -117,8 +123,9 @@ async function listarAuditoria(req, res, next) {
 
     const [rows] = await pool.query(
       `SELECT a.id, a.tabla, a.accion, a.ip, a.creado_en,
-              a.dato_antes, a.dato_despues,
-              CONCAT(u.nombre, ' ', COALESCE(u.apellido,'')) AS usuario_nombre,
+              a.datos_antes AS dato_antes,
+              a.datos_despues AS dato_despues,
+              CONCAT(COALESCE(u.nombre,''), ' ', COALESCE(u.apellido,'')) AS usuario_nombre,
               u.email AS usuario_email, u.rol AS usuario_rol
        FROM auditoria a
        LEFT JOIN usuarios u ON u.id = a.usuario_id
