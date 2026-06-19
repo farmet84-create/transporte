@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+ import { useState, useEffect, useCallback } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area, RadarChart,
@@ -495,7 +495,7 @@ export default function Reportes() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                    <thead><tr className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400 border-b">
                       {['Placa','Vehículo','Viajes','Km','Ingresos','Costos','Utilidad','Rentabilidad'].map(h => (
                         <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                       ))}
@@ -504,7 +504,7 @@ export default function Reportes() {
                       {vehiculos.length === 0
                         ? <tr><td colSpan={8} className="text-center py-10 text-gray-400">Sin datos para {MESES[mes]}</td></tr>
                         : vehiculos.map((v,i) => (
-                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100">
                           <td className="px-4 py-3"><span className="font-mono font-bold bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">{v.placa}</span></td>
                           <td className="px-4 py-3 font-medium">{v.vehiculo}</td>
                           <td className="px-4 py-3 text-center">{v.total_viajes}</td>
@@ -561,7 +561,7 @@ export default function Reportes() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                    <thead><tr className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400 border-b">
                       {['Conductor','Documento','Viajes','Km','Ingresos','Utilidad','Rentabilidad'].map(h => (
                         <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                       ))}
@@ -570,7 +570,7 @@ export default function Reportes() {
                       {conductores.length === 0
                         ? <tr><td colSpan={7} className="text-center py-10 text-gray-400">Sin datos para {MESES[mes]}</td></tr>
                         : conductores.map((c,i) => (
-                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100">
                           <td className="px-4 py-3 font-medium">{c.conductor}</td>
                           <td className="px-4 py-3 text-gray-500">{c.numero_documento}</td>
                           <td className="px-4 py-3 text-center">{c.total_viajes}</td>
@@ -646,7 +646,7 @@ export default function Reportes() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="bg-gray-50 text-xs uppercase text-gray-500 border-b">
+                    <thead><tr className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400 border-b">
                       {['Cliente','NIT','Viajes','Facturado','Costos','Utilidad','Rentabilidad'].map(h => (
                         <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                       ))}
@@ -655,7 +655,7 @@ export default function Reportes() {
                       {clientes.length === 0
                         ? <tr><td colSpan={7} className="text-center py-10 text-gray-400">Sin datos para {MESES[mes]}</td></tr>
                         : clientes.map((c,i) => (
-                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100">
                           <td className="px-4 py-3 font-medium">{c.cliente}</td>
                           <td className="px-4 py-3 text-gray-500 text-xs">{c.nit || '—'}</td>
                           <td className="px-4 py-3 text-center">{c.total_viajes}</td>
