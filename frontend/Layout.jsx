@@ -1,20 +1,19 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Truck, Users, UserCheck, MapPin,
-  FileText, BarChart2, Settings, LogOut, Menu, X,
-  DollarSign, ChevronRight
+  LayoutDashboard, Truck, UserCheck, Users,
+  FileText, BarChart2, LogOut, Menu, X, DollarSign
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 
 const nav = [
-  { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/viajes',     icon: FileText,         label: 'Viajes' },
-  { to: '/vehiculos',  icon: Truck,            label: 'Vehículos' },
-  { to: '/conductores',icon: UserCheck,        label: 'Conductores' },
-  { to: '/clientes',   icon: Users,            label: 'Clientes' },
-  { to: '/costos',     icon: DollarSign,       label: 'Costos mensuales' },
-  { to: '/reportes',   icon: BarChart2,        label: 'Reportes' },
+  { to: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/viajes',      icon: FileText,         label: 'Viajes' },
+  { to: '/vehiculos',   icon: Truck,            label: 'Vehículos' },
+  { to: '/conductores', icon: UserCheck,        label: 'Conductores' },
+  { to: '/clientes',    icon: Users,            label: 'Clientes' },
+  { to: '/costos',      icon: DollarSign,       label: 'Costos mensuales' },
+  { to: '/reportes',    icon: BarChart2,        label: 'Reportes' },
 ]
 
 export default function Layout() {
@@ -28,50 +27,65 @@ export default function Layout() {
   }
 
   const Sidebar = ({ mobile = false }) => (
-    <aside className={`flex flex-col h-full bg-primary-900 text-white ${mobile ? 'w-full' : 'w-64'}`}>
+    <aside style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: '#0f172a', color: '#fff',
+      width: mobile ? '100%' : 256
+    }}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-primary-700">
-        <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-          <Truck className="w-5 h-5 text-white" />
+      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'20px 24px', borderBottom:'1px solid #1e293b' }}>
+        <div style={{ width:36, height:36, background:'#4f46e5', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <Truck style={{ width:20, height:20, color:'#fff' }} />
         </div>
         <div>
-          <p className="font-bold text-sm">TransportePro</p>
-          <p className="text-primary-400 text-xs">Rentabilidad</p>
+          <p style={{ fontWeight:700, fontSize:14, color:'#fff', margin:0 }}>TransportePro</p>
+          <p style={{ fontSize:11, color:'#94a3b8', margin:0 }}>Rentabilidad</p>
         </div>
+        {mobile && (
+          <button onClick={() => setSidebarOpen(false)}
+            style={{ marginLeft:'auto', background:'transparent', border:'none', cursor:'pointer', color:'#94a3b8', padding:4 }}>
+            <X style={{ width:20, height:20 }} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav style={{ flex:1, padding:'12px 12px', overflowY:'auto' }}>
         {nav.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to}
             onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-600 text-white'
-                  : 'text-primary-300 hover:bg-primary-800 hover:text-white'
-              }`
-            }>
-            <Icon className="w-5 h-5 flex-shrink-0" />
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+              fontSize: 14, fontWeight: 500, textDecoration: 'none',
+              background: isActive ? '#4f46e5' : 'transparent',
+              color: isActive ? '#fff' : '#94a3b8',
+              transition: 'all 0.15s'
+            })}
+            onMouseEnter={e => { if (!e.currentTarget.classList.contains('active')) { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff' }}}
+            onMouseLeave={e => { if (!e.currentTarget.querySelector('[aria-current]')) { e.currentTarget.style.background = ''; e.currentTarget.style.color = '' }}}>
+            <Icon style={{ width:18, height:18, flexShrink:0 }} />
             {label}
           </NavLink>
         ))}
       </nav>
 
       {/* Usuario */}
-      <div className="px-3 py-4 border-t border-primary-700">
-        <div className="flex items-center gap-3 px-3 py-2 mb-1">
-          <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-xs font-bold">
-            {usuario?.nombre?.charAt(0) || 'U'}
+      <div style={{ padding:'12px', borderTop:'1px solid #1e293b' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', marginBottom:4 }}>
+          <div style={{ width:34, height:34, background:'#4f46e5', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff', flexShrink:0 }}>
+            {usuario?.nombre?.charAt(0)?.toUpperCase() || 'U'}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{usuario?.nombre}</p>
-            <p className="text-primary-400 text-xs truncate">{usuario?.rol}</p>
+          <div style={{ flex:1, minWidth:0 }}>
+            <p style={{ fontSize:13, fontWeight:600, color:'#fff', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{usuario?.nombre}</p>
+            <p style={{ fontSize:11, color:'#64748b', margin:0, textTransform:'capitalize' }}>{usuario?.rol}</p>
           </div>
         </div>
         <button onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm text-primary-300 hover:bg-primary-800 hover:text-white transition-colors">
-          <LogOut className="w-4 h-4" />
+          style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', width:'100%', background:'transparent', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, color:'#94a3b8', transition:'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8' }}>
+          <LogOut style={{ width:16, height:16 }} />
           Cerrar sesión
         </button>
       </div>
@@ -79,38 +93,69 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#f8fafc' }}>
       {/* Sidebar desktop */}
-      <div className="hidden lg:flex flex-shrink-0">
+      <div className="hidden lg:flex" style={{ flexShrink:0 }}>
         <Sidebar />
       </div>
 
       {/* Sidebar mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 z-10">
+        <div style={{ position:'fixed', inset:0, zIndex:50 }} className="lg:hidden">
+          {/* Backdrop */}
+          <div onClick={() => setSidebarOpen(false)}
+            style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(2px)' }} />
+          {/* Drawer */}
+          <div style={{ position:'absolute', left:0, top:0, bottom:0, width:280, zIndex:10 }}>
             <Sidebar mobile />
           </div>
         </div>
       )}
 
       {/* Contenido principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar mobile */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100">
-            <Menu className="w-5 h-5" />
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+        {/* ── Top bar móvil ── */}
+        <header className="lg:hidden" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 16px', height: 56,
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          position: 'relative', zIndex: 10
+        }}>
+          {/* Botón hamburger — siempre visible */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              width: 40, height: 40, borderRadius: 10,
+              background: '#f1f5f9', border: '1px solid #e2e8f0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0
+            }}>
+            <Menu style={{ width: 20, height: 20, color: '#334155' }} />
           </button>
-          <div className="flex items-center gap-2">
-            <Truck className="w-5 h-5 text-primary-600" />
-            <span className="font-semibold text-sm">TransportePro</span>
+
+          {/* Logo centro */}
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ width:30, height:30, background:'#4f46e5', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Truck style={{ width:16, height:16, color:'#fff' }} />
+            </div>
+            <span style={{ fontWeight:700, fontSize:14, color:'#0f172a' }}>TransportePro</span>
           </div>
-          <div className="w-9" />
+
+          {/* Avatar usuario */}
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0
+          }}>
+            {usuario?.nombre?.charAt(0)?.toUpperCase() || 'U'}
+          </div>
         </header>
 
         {/* Página */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main style={{ flex:1, overflowY:'auto', padding:'16px' }} className="lg:p-6">
           <Outlet />
         </main>
       </div>
