@@ -187,17 +187,17 @@ export default function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPI label="Ingresos del mes" icon={DollarSign} color="blue"
-          valor={kpis ? formatCOP(kpis.total_ingresos) : '—'}
-          sub={kpis?.variacion_ingresos != null ? `${kpis.variacion_ingresos > 0 ? '↑' : '↓'} ${Math.abs(kpis.variacion_ingresos).toFixed(1)}% vs mes anterior` : undefined} />
-        <KPI label="Utilidad neta" icon={TrendingUp} color={kpis?.total_utilidad >= 0 ? 'green' : 'red'}
-          valor={kpis ? formatCOP(kpis.total_utilidad) : '—'}
-          sub={kpis?.variacion_utilidad != null ? `${kpis.variacion_utilidad > 0 ? '↑' : '↓'} ${Math.abs(kpis.variacion_utilidad).toFixed(1)}% vs mes anterior` : undefined} />
+          valor={kpis ? formatCOP(parseFloat(kpis.total_ingresos || 0)) : '—'}
+          sub={kpis?.variacion_ingresos != null ? `${parseFloat(kpis.variacion_ingresos) > 0 ? '↑' : '↓'} ${Math.abs(parseFloat(kpis.variacion_ingresos)).toFixed(1)}% vs mes anterior` : undefined} />
+        <KPI label="Utilidad neta" icon={TrendingUp} color={parseFloat(kpis?.total_utilidad || 0) >= 0 ? 'green' : 'red'}
+          valor={kpis ? formatCOP(parseFloat(kpis.total_utilidad || 0)) : '—'}
+          sub={kpis?.variacion_utilidad != null ? `${parseFloat(kpis.variacion_utilidad) > 0 ? '↑' : '↓'} ${Math.abs(parseFloat(kpis.variacion_utilidad)).toFixed(1)}% vs mes anterior` : undefined} />
         <KPI label="Rentabilidad promedio" icon={BarChart2} color="blue"
           valor={kpis ? `${parseFloat(kpis.rentabilidad_promedio || 0).toFixed(1)}%` : '—'}
           sub={kpis ? `${kpis.viajes_rentables || 0} viajes rentables` : undefined} />
         <KPI label="Total viajes" icon={Truck} color="gray"
           valor={kpis ? kpis.total_viajes : '0'}
-          sub={kpis ? `${formatCOP(kpis.total_km_recorridos || 0).replace('$','')} km recorridos` : '— km recorridos'} />
+          sub={kpis ? `${parseFloat(kpis.total_km || 0).toLocaleString('es-CO')} km recorridos` : '— km recorridos'} />
       </div>
 
       {/* KPIs secundarios */}
@@ -205,21 +205,21 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="card p-4 text-center">
             <p className="text-xs text-gray-500 mb-1">Total costos</p>
-            <p className="text-lg font-bold text-red-600">{formatCOP(kpis.total_costos)}</p>
+            <p className="text-lg font-bold text-red-600">{formatCOP(parseFloat(kpis.total_costos || 0))}</p>
           </div>
           <div className="card p-4 text-center">
             <p className="text-xs text-gray-500 mb-1">Viajes completados</p>
-            <p className="text-lg font-bold text-green-600">{kpis.viajes_completados || 0}</p>
+            <p className="text-lg font-bold text-green-600">{kpis.viajes_rentables || 0}</p>
           </div>
           <div className="card p-4 text-center">
-            <p className="text-xs text-gray-500 mb-1">Viajes en curso</p>
-            <p className="text-lg font-bold text-blue-600">{kpis.viajes_en_curso || 0}</p>
+            <p className="text-xs text-gray-500 mb-1">Viajes con pérdida</p>
+            <p className="text-lg font-bold text-red-500">{kpis.viajes_perdida || 0}</p>
           </div>
           <div className="card p-4 text-center">
             <p className="text-xs text-gray-500 mb-1">Margen promedio</p>
             <p className="text-lg font-bold text-primary-600">
-              {kpis.total_ingresos > 0
-                ? `${((kpis.total_utilidad / kpis.total_ingresos) * 100).toFixed(1)}%`
+              {parseFloat(kpis.total_ingresos || 0) > 0
+                ? `${((parseFloat(kpis.total_utilidad) / parseFloat(kpis.total_ingresos)) * 100).toFixed(1)}%`
                 : '—'}
             </p>
           </div>
