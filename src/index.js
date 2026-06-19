@@ -1,12 +1,11 @@
 'use strict';
-
 require('dotenv').config();
 const express   = require('express');
 const helmet    = require('helmet');
 const cors      = require('cors');
 const { connectDB } = require('./config/database');
 const logger    = require('./config/logger');
-const errorHandler = require('./middlewares/errorHandler');
+const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const routes    = require('./routes');
 
 const app  = express();
@@ -29,11 +28,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/api', routes);
-
-app.use((req, res) => {
-  res.status(404).json({ ok: false, mensaje: 'Ruta no encontrada' });
-});
-
+app.use(notFound);
 app.use(errorHandler);
 
 const start = async () => {
