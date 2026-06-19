@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Truck, Users, UserCheck,
-  FileText, BarChart2, LogOut, Menu, DollarSign, Settings
+  FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 
@@ -14,6 +14,7 @@ const nav = [
   { to: '/clientes',    icon: Users,            label: 'Clientes' },
   { to: '/costos',      icon: DollarSign,       label: 'Costos mensuales' },
   { to: '/reportes',    icon: BarChart2,        label: 'Reportes' },
+  { to: '/alertas',      icon: Bell,            label: 'Alertas' },
   { to: '/admin',        icon: Settings,        label: 'Administración' },
 ]
 
