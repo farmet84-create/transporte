@@ -110,34 +110,34 @@ async function rentabilidadPorVehiculo(req, res, next) {
     if (placa) { where += ' AND vh.placa LIKE ?';           params.push(`%${placa.toUpperCase()}%`); }
 
     // 1. Datos base de viajes por vehículo
+    const anioNum = parseInt(anio) || new Date().getFullYear()
+    const mesNum  = parseInt(mes)  || new Date().getMonth() + 1
+
     const [viajes] = await pool.query(
       `SELECT
           vh.id AS vehiculo_id,
           vh.placa,
           CONCAT(vh.marca,' ',vh.modelo) AS vehiculo,
-          YEAR(v.fecha_salida)  AS anio,
-          MONTH(v.fecha_salida) AS mes,
+          ? AS anio,
+          ? AS mes,
           COUNT(v.id)                     AS total_viajes,
           SUM(v.km_recorridos)            AS total_km,
           SUM(v.valor_flete_cobrado)      AS total_ingresos,
           SUM(v.total_gastos_directos)    AS total_gastos_directos,
           SUM(v.costo_admin_aplicado)     AS total_costo_admin_viajes,
-          -- Conductor más frecuente del vehículo en el mes
           (SELECT c2.id FROM viajes v2
            INNER JOIN conductores c2 ON c2.id = v2.conductor_id
-           WHERE v2.vehiculo_id = vh.id AND v2.empresa_id = v.empresa_id
-             AND YEAR(v2.fecha_salida) = YEAR(v.fecha_salida)
-             AND MONTH(v2.fecha_salida) = MONTH(v.fecha_salida)
+           WHERE v2.vehiculo_id = vh.id AND v2.empresa_id = ?
+             AND YEAR(v2.fecha_salida) = ? AND MONTH(v2.fecha_salida) = ?
              AND v2.eliminado_en IS NULL
            GROUP BY c2.id ORDER BY COUNT(*) DESC LIMIT 1
           ) AS conductor_id_principal
        FROM viajes v
        INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
        ${where}
-       GROUP BY vh.id, vh.placa, vh.marca, vh.modelo,
-                YEAR(v.fecha_salida), MONTH(v.fecha_salida)
+       GROUP BY vh.id, vh.placa, vh.marca, vh.modelo
        ORDER BY total_ingresos DESC`,
-      params
+      [anioNum, mesNum, empresaId, anioNum, mesNum, ...params]
     );
 
     // 2. Para cada vehículo, obtener costos mensuales y salario conductor
@@ -151,7 +151,7 @@ async function rentabilidadPorVehiculo(req, res, next) {
           ), 0) AS total_operacion
          FROM costos_operacion_mensual
          WHERE empresa_id = ? AND vehiculo_id = ? AND anio = ? AND mes = ?`,
-        [empresaId, v.vehiculo_id, v.anio, v.mes]
+        [empresaId, v.vehiculo_id, anioNum, mesNum]
       );
 
       // Costos administrativos del mes (prorrateados por número de viajes del vehículo)
@@ -163,7 +163,7 @@ async function rentabilidadPorVehiculo(req, res, next) {
          FROM costos_administrativos_mensual
          WHERE empresa_id = ? AND anio = ? AND mes = ?
          LIMIT 1`,
-        [empresaId, v.anio, v.mes]
+        [empresaId, anioNum, mesNum]
       );
 
       // Salario + prestaciones del conductor principal
