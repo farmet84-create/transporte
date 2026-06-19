@@ -79,7 +79,7 @@ export default function Dashboard() {
         }),
         reportesAPI.porVehiculo({ anio, mes }),
       ])
-      setKpis(resKpis.data.datos)
+      setKpis(resKpis.data.datos?.kpis || null)
       setEvolucion(resEvol.data.datos || [])
       setViajes(resViajes.data.datos || [])
       setTopVehiculos(resTop.data.datos || [])
