@@ -105,17 +105,36 @@ export default function DetalleViaje() {
   const guardarViaje = async () => {
     setGuardando(true)
     try {
+      // Función para extraer fecha local sin problemas de zona horaria
+      const fechaLocal = (val) => {
+        if (!val) return null
+        if (val.includes('T')) {
+          // Es un datetime ISO, extraer solo fecha local
+          const d = new Date(val)
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+        }
+        return val.substring(0, 10)
+      }
+      const horaLocal = (val) => {
+        if (!val) return null
+        if (val.includes('T')) {
+          const d = new Date(val)
+          return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+        }
+        return val.substring(0, 5)
+      }
+
       const res = await viajesAPI.actualizar(id, {
         cliente_id:           formViaje.cliente_id,
         origen:               formViaje.origen,
         destino:              formViaje.destino,
-        fecha_salida:         formViaje.fecha_salida?.substring(0,10),
-        hora_salida:          formViaje.hora_salida?.substring(0,5),
-        fecha_llegada:        formViaje.fecha_llegada?.substring(0,10) || null,
-        hora_llegada:         formViaje.hora_llegada?.substring(0,5) || null,
+        fecha_salida:         fechaLocal(formViaje.fecha_salida),
+        hora_salida:          horaLocal(formViaje.hora_salida),
+        fecha_llegada:        fechaLocal(formViaje.fecha_llegada),
+        hora_llegada:         horaLocal(formViaje.hora_llegada),
         km_recorridos:        formViaje.km_recorridos,
         numero_manifiesto:    formViaje.numero_manifiesto,
-        fecha_manifiesto:     formViaje.fecha_manifiesto?.substring(0,10),
+        fecha_manifiesto:     fechaLocal(formViaje.fecha_manifiesto),
         tipo_carga:           formViaje.tipo_carga,
         peso_carga_kg:        formViaje.peso_carga_kg,
         valor_manifiesto:     parseFloat(formViaje.valor_manifiesto || 0),
@@ -287,9 +306,9 @@ export default function DetalleViaje() {
                   </select>
                 </div>
                 <div><label className="label">Fecha salida</label>
-                  <input type="date" value={formViaje.fecha_salida?.substring(0,10)} onChange={e => setF('fecha_salida', e.target.value)} className="input" /></div>
+                  <input type="date" value={formViaje.fecha_salida ? (formViaje.fecha_salida.includes('T') ? new Date(formViaje.fecha_salida).toLocaleDateString('en-CA') : formViaje.fecha_salida.substring(0,10)) : ''} onChange={e => setF('fecha_salida', e.target.value)} className="input" /></div>
                 <div><label className="label">Hora salida</label>
-                  <input type="time" value={formViaje.hora_salida?.substring(0,5)} onChange={e => setF('hora_salida', e.target.value)} className="input" /></div>
+                  <input type="time" value={formViaje.hora_salida ? (formViaje.hora_salida.includes('T') ? `${String(new Date(formViaje.hora_salida).getHours()).padStart(2,'0')}:${String(new Date(formViaje.hora_salida).getMinutes()).padStart(2,'0')}` : formViaje.hora_salida.substring(0,5)) : ''} onChange={e => setF('hora_salida', e.target.value)} className="input" /></div>
                 <div><label className="label">Fecha llegada</label>
                   <input type="date" value={formViaje.fecha_llegada?.substring(0,10) || ''} onChange={e => setF('fecha_llegada', e.target.value)} className="input" /></div>
                 <div><label className="label">Hora llegada</label>
