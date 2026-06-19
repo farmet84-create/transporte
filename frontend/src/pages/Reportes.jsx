@@ -116,7 +116,7 @@ TOP CLIENTES (mes actual):
 ${datos.clientes?.slice(0,5).map(c => `- ${c.cliente}: ${c.total_viajes} viajes, Facturado ${formatCOP(c.total_facturado)}, Rentabilidad ${parseFloat(c.rentabilidad_promedio_pct||0).toFixed(1)}%`).join('\n') || 'Sin datos'}
 `
 
-      const GROQ_KEY = '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'
+      const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
