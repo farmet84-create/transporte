@@ -15,16 +15,36 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [numAlertas, setNumAlertas]   = useState(0)
 
-  // Cargar conteo de alertas cada 5 minutos
+  // Cargar alertas al iniciar y programar recarga a las 11 PM cada día
   useEffect(() => {
     const cargarAlertas = () => {
       api.get('/alertas')
         .then(r => setNumAlertas(r.data.datos?.resumen?.total || 0))
         .catch(() => {})
     }
+
+    // Cargar al iniciar sesión
     cargarAlertas()
-    const interval = setInterval(cargarAlertas, 24 * 60 * 60 * 1000)
-    return () => clearInterval(interval)
+
+    // Calcular ms hasta las 11 PM de hoy
+    const ahora = new Date()
+    const hoy11pm = new Date()
+    hoy11pm.setHours(23, 0, 0, 0)
+
+    // Si ya pasaron las 11 PM de hoy, programar para mañana
+    if (ahora > hoy11pm) hoy11pm.setDate(hoy11pm.getDate() + 1)
+
+    const msHasta11pm = hoy11pm - ahora
+
+    // Primer timeout hasta las 11 PM
+    const timeout = setTimeout(() => {
+      cargarAlertas()
+      // Luego repetir cada 24 horas
+      const interval = setInterval(cargarAlertas, 24 * 60 * 60 * 1000)
+      return () => clearInterval(interval)
+    }, msHasta11pm)
+
+    return () => clearTimeout(timeout)
   }, [])
 
   const nav = [
