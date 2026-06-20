@@ -15,13 +15,20 @@ const FORM_INICIAL = {
   salario_base:'', auxilio_transporte:'', comisiones:'', observaciones:''
 }
 
+// Limpia fechas ISO a formato YYYY-MM-DD que acepta MySQL
+const limpiarFecha = (fecha) => {
+  if (!fecha) return null
+  if (typeof fecha === 'string' && fecha.includes('T')) return fecha.split('T')[0]
+  return fecha || null
+}
+
 function Modal({ titulo, onClose, children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-semibold text-gray-900">{titulo}</h2>
+          <h2 style={{ fontSize:16, fontWeight:700, color:'#111827' }}>{titulo}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-6">{children}</div>
@@ -81,11 +88,11 @@ function FormConductor({ inicial, onGuardar, onCancelar, cargando }) {
         </div>
         <div>
           <label className="label">Vencimiento licencia</label>
-          <input type="date" value={form.vencimiento_licencia} onChange={e => set('vencimiento_licencia', e.target.value)} className="input" />
+          <input type="date" value={limpiarFecha(form.vencimiento_licencia) || ''} onChange={e => set('vencimiento_licencia', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Fecha ingreso</label>
-          <input type="date" value={form.fecha_ingreso} onChange={e => set('fecha_ingreso', e.target.value)} className="input" />
+          <input type="date" value={limpiarFecha(form.fecha_ingreso) || ''} onChange={e => set('fecha_ingreso', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Tipo contrato</label>
@@ -103,7 +110,7 @@ function FormConductor({ inicial, onGuardar, onCancelar, cargando }) {
         </div>
         <div>
           <label className="label">Comisiones</label>
-          <input type="number" value={form.comisiones} onChange={e => set('comisiones', e.target.value)} className="input" placeholder="0" />
+          <input type="number" value={form.comisiones || ''} onChange={e => set('comisiones', e.target.value)} className="input" placeholder="0" />
         </div>
       </div>
       <div>
@@ -155,7 +162,11 @@ export default function Conductores() {
     }
     setGuardando(true)
     try {
-      await conductoresAPI.crear(form)
+      await conductoresAPI.crear({
+        ...form,
+        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia),
+        fecha_ingreso: limpiarFecha(form.fecha_ingreso),
+      })
       toast.success('Conductor creado correctamente')
       setModal(null)
       cargar()
@@ -170,17 +181,21 @@ export default function Conductores() {
     setGuardando(true)
     try {
       await conductoresAPI.actualizar(modal.id, {
-        nombres: form.nombres, apellidos: form.apellidos,
-        telefono: form.telefono, email: form.email,
-        ciudad: form.ciudad, direccion: form.direccion,
-        numero_licencia: form.numero_licencia,
-        categoria_licencia: form.categoria_licencia,
-        vencimiento_licencia: form.vencimiento_licencia || null,
-        fecha_ingreso: form.fecha_ingreso || null,
-        tipo_contrato: form.tipo_contrato,
-        salario_base: parseFloat(form.salario_base || 0),
-        auxilio_transporte: parseFloat(form.auxilio_transporte || 0),
-        observaciones: form.observaciones
+        nombres:              form.nombres,
+        apellidos:            form.apellidos,
+        telefono:             form.telefono,
+        email:                form.email,
+        ciudad:               form.ciudad,
+        direccion:            form.direccion,
+        numero_licencia:      form.numero_licencia,
+        categoria_licencia:   form.categoria_licencia,
+        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia),  // ← FIX: limpia ISO a YYYY-MM-DD
+        fecha_ingreso:        limpiarFecha(form.fecha_ingreso),          // ← FIX: limpia ISO a YYYY-MM-DD
+        tipo_contrato:        form.tipo_contrato,
+        salario_base:         parseFloat(form.salario_base || 0),
+        auxilio_transporte:   parseFloat(form.auxilio_transporte || 0),
+        comisiones:           parseFloat(form.comisiones || 0),
+        observaciones:        form.observaciones,
       })
       toast.success('Conductor actualizado')
       setModal(null)
@@ -207,8 +222,8 @@ export default function Conductores() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Conductores</h1>
-          <p className="text-gray-500 text-sm">{total} conductores registrados</p>
+          <h1 style={{ fontSize:22, fontWeight:800, color:'#111827' }}>Conductores</h1>
+          <p style={{ fontSize:13, color:'#6b7280' }}>{total} conductores registrados</p>
         </div>
         <button onClick={() => setModal('nuevo')} className="btn-primary flex items-center gap-2 text-sm">
           <Plus className="w-4 h-4" /> Nuevo conductor
@@ -220,12 +235,9 @@ export default function Conductores() {
           <div className="flex-1 relative">
             <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o documento..."
-              className="input pl-9" />
+              placeholder="Buscar por nombre o documento..." className="input pl-9" />
           </div>
-          {busqueda && (
-            <button onClick={() => setBusqueda('')} className="btn-secondary text-sm">Limpiar</button>
-          )}
+          {busqueda && <button onClick={() => setBusqueda('')} className="btn-secondary text-sm">Limpiar</button>}
         </div>
       </div>
 
@@ -233,15 +245,10 @@ export default function Conductores() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b">
-                <th className="px-5 py-3 text-left font-medium">Conductor</th>
-                <th className="px-5 py-3 text-left font-medium">Documento</th>
-                <th className="px-5 py-3 text-left font-medium">Teléfono</th>
-                <th className="px-5 py-3 text-left font-medium">Licencia</th>
-                <th className="px-5 py-3 text-left font-medium">Vencimiento</th>
-                <th className="px-5 py-3 text-right font-medium">Salario</th>
-                <th className="px-5 py-3 text-center font-medium">Estado</th>
-                <th className="px-5 py-3"></th>
+              <tr style={{ background:'#1f2937' }}>
+                {['Conductor','Documento','Teléfono','Licencia','Vencimiento','Salario','Estado',''].map(h => (
+                  <th key={h} style={{ padding:'10px 20px', textAlign: h==='Salario'?'right':h==='Estado'?'center':'left', fontSize:11, fontWeight:600, color:'#d1d5db', textTransform:'uppercase', letterSpacing:'0.04em' }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -253,46 +260,46 @@ export default function Conductores() {
               ) : conductores.length === 0 ? (
                 <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">
                   No hay conductores.{' '}
-                  <button onClick={() => setModal('nuevo')} className="text-primary-600 hover:underline">
-                    Agregar el primero
-                  </button>
+                  <button onClick={() => setModal('nuevo')} className="text-primary-600 hover:underline">Agregar el primero</button>
                 </td></tr>
               ) : conductores.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-gray-900">{c.nombres} {c.apellidos}</p>
-                    <p className="text-gray-400 text-xs">{c.ciudad || '—'}</p>
+                <tr key={c.id} style={{ borderBottom:'1px solid #f3f4f6' }}
+                  onMouseEnter={e => e.currentTarget.style.background='#f9fafb'}
+                  onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                  <td style={{ padding:'10px 20px' }}>
+                    <p style={{ fontWeight:600, color:'#111827' }}>{c.nombres} {c.apellidos}</p>
+                    <p style={{ fontSize:11, color:'#9ca3af' }}>{c.ciudad || '—'}</p>
                   </td>
-                  <td className="px-5 py-3 text-gray-600">
-                    <span className="text-xs text-gray-400">{c.tipo_documento} </span>
+                  <td style={{ padding:'10px 20px', color:'#374151' }}>
+                    <span style={{ fontSize:11, color:'#9ca3af' }}>{c.tipo_documento} </span>
                     {c.numero_documento}
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{c.telefono || '—'}</td>
-                  <td className="px-5 py-3 text-gray-600">
+                  <td style={{ padding:'10px 20px', color:'#374151' }}>{c.telefono || '—'}</td>
+                  <td style={{ padding:'10px 20px', color:'#374151' }}>
                     {c.numero_licencia || '—'}
-                    {c.categoria_licencia && <span className="ml-1 badge-blue">{c.categoria_licencia}</span>}
+                    {c.categoria_licencia && (
+                      <span style={{ marginLeft:6, fontSize:11, background:'#eff6ff', color:'#1d4ed8', padding:'1px 6px', borderRadius:20, fontWeight:600 }}>{c.categoria_licencia}</span>
+                    )}
                   </td>
-                  <td className="px-5 py-3">
+                  <td style={{ padding:'10px 20px' }}>
                     {c.vencimiento_licencia ? (
-                      <span className={new Date(c.vencimiento_licencia) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600'}>
+                      <span style={{ color: new Date(c.vencimiento_licencia) < new Date() ? '#dc2626' : '#374151', fontWeight: new Date(c.vencimiento_licencia) < new Date() ? 600 : 400 }}>
                         {formatFecha(c.vencimiento_licencia)}
                       </span>
                     ) : '—'}
                   </td>
-                  <td className="px-5 py-3 text-right text-gray-600">{formatCOP(c.salario_base)}</td>
-                  <td className="px-5 py-3 text-center">
-                    <span className={c.activo ? 'badge-green' : 'badge-red'}>
+                  <td style={{ padding:'10px 20px', textAlign:'right', color:'#374151' }}>{formatCOP(c.salario_base)}</td>
+                  <td style={{ padding:'10px 20px', textAlign:'center' }}>
+                    <span style={{ fontSize:11, fontWeight:600, background: c.activo?'#dcfce7':'#fee2e2', color: c.activo?'#15803d':'#dc2626', padding:'3px 10px', borderRadius:20 }}>
                       {c.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => setModal(c)}
-                        className="p-1.5 rounded-lg hover:bg-primary-50 text-primary-600 transition-colors">
+                  <td style={{ padding:'10px 20px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'flex-end' }}>
+                      <button onClick={() => setModal(c)} style={{ padding:'5px', background:'transparent', border:'none', borderRadius:6, cursor:'pointer', color:'#4f46e5' }}>
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => eliminar(c)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors">
+                      <button onClick={() => eliminar(c)} style={{ padding:'5px', background:'transparent', border:'none', borderRadius:6, cursor:'pointer', color:'#ef4444' }}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
