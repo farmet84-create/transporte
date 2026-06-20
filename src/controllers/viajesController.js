@@ -1,10 +1,23 @@
- 'use strict';
+'use strict';
 
 const { pool } = require('../config/database');
 const {
   ok, error, nuevoUuid, paginar, respuestaPaginada,
   registrarAuditoria, generarNumeroViaje
 } = require('../utils/helpers');
+
+// Extrae año/mes de una fecha string sin conversión de zona horaria
+const anioMesDeFecha = (fechaStr) => {
+  const s = (fechaStr || '').toString().substring(0, 10)
+  const [anio, mes] = s.split('-').map(Number)
+  return { anio, mes }
+}
+
+// Limpia fecha a YYYY-MM-DD sin importar si viene con hora ISO
+const limpiarFecha = (f) => {
+  if (!f) return null
+  return f.toString().substring(0, 10)
+}
 
 // GET /api/viajes
 async function listar(req, res, next) {
@@ -91,7 +104,6 @@ async function obtener(req, res, next) {
       [req.params.id]
     );
 
-    // Lista de clientes para permitir cambio en edición
     const [clientes] = await pool.query(
       `SELECT id, razon_social, nit FROM clientes
        WHERE empresa_id = ? AND eliminado_en IS NULL AND activo = 1
@@ -115,8 +127,8 @@ async function crear(req, res, next) {
       valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
-    const anio = new Date(fecha_salida).getFullYear();
-    const mes  = new Date(fecha_salida).getMonth() + 1;
+    // FIX: usar anioMesDeFecha para evitar problema de zona horaria
+    const { anio, mes } = anioMesDeFecha(fecha_salida)
 
     const [[costoOp]]    = await pool.query(
       `SELECT COALESCE(costo_por_km, 0) AS costo_por_km FROM costos_operacion_mensual
@@ -149,8 +161,14 @@ async function crear(req, res, next) {
       [
         uuid, empresaId, numeroViaje,
         vehiculo_id, conductor_id, cliente_id, ruta_id || null,
-        origen, destino, fecha_salida, hora_salida, fecha_llegada || null, hora_llegada || null,
-        kmNum, numero_manifiesto || null, fecha_manifiesto || null,
+        origen, destino,
+        limpiarFecha(fecha_salida),
+        hora_salida,
+        limpiarFecha(fecha_llegada) || null,
+        hora_llegada || null,
+        kmNum,
+        numero_manifiesto || null,
+        limpiarFecha(fecha_manifiesto) || null,
         tipo_carga || null, peso_carga_kg || null,
         parseFloat(valor_manifiesto || 0),
         parseFloat(anticipo || 0),
@@ -175,7 +193,7 @@ async function crear(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// PUT /api/viajes/:id — actualizar datos completos del viaje
+// PUT /api/viajes/:id
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
@@ -196,6 +214,11 @@ async function actualizar(req, res, next) {
     } = req.body;
 
     const kmNum = parseFloat(km_recorridos || antes[0].km_recorridos);
+
+    // FIX: limpiar todas las fechas a YYYY-MM-DD antes de guardar
+    const fechaSalidaLimpia    = limpiarFecha(fecha_salida)    || limpiarFecha(antes[0].fecha_salida)
+    const fechaLlegadaLimpia   = limpiarFecha(fecha_llegada)   || null
+    const fechaManifiestoLimpia = limpiarFecha(fecha_manifiesto) || null
 
     await pool.query(
       `UPDATE viajes SET
@@ -219,13 +242,13 @@ async function actualizar(req, res, next) {
         cliente_id            || antes[0].cliente_id,
         origen                || antes[0].origen,
         destino               || antes[0].destino,
-        fecha_salida          || antes[0].fecha_salida,
+        fechaSalidaLimpia,
         hora_salida           || antes[0].hora_salida,
-        fecha_llegada         || null,
+        fechaLlegadaLimpia,
         hora_llegada          || null,
         kmNum, kmNum,
         numero_manifiesto     || null,
-        fecha_manifiesto      || null,
+        fechaManifiestoLimpia,
         tipo_carga            || null,
         parseFloat(peso_carga_kg        || 0) || null,
         parseFloat(valor_manifiesto     || 0),
@@ -276,8 +299,8 @@ async function cambiarEstado(req, res, next) {
 
     if (estado === 'completado') {
       const [viajeData] = await pool.query(`SELECT fecha_salida FROM viajes WHERE id = ?`, [id]);
-      const anio = new Date(viajeData[0].fecha_salida).getFullYear();
-      const mes  = new Date(viajeData[0].fecha_salida).getMonth() + 1;
+      // FIX: usar anioMesDeFecha para evitar problema de zona horaria
+      const { anio, mes } = anioMesDeFecha(viajeData[0].fecha_salida)
       await pool.query(
         `UPDATE costos_administrativos_mensual
          SET total_viajes_mes = (
@@ -314,7 +337,7 @@ async function agregarGasto(req, res, next) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [uuid, empresaId, viajeId, categoria, descripcion || null,
        parseFloat(valor), parseFloat(cantidad || 1), unidad || null,
-       proveedor || null, fecha, req.usuario.id]
+       proveedor || null, limpiarFecha(fecha), req.usuario.id]
     );
 
     await recalcularGastosDirectos(viajeId);
@@ -365,7 +388,7 @@ async function agregarCombustible(req, res, next) {
       [uuid, empresaId, viajeId, nombre_estacion,
        parseFloat(km_inicial), parseFloat(km_final),
        parseFloat(valor_galon), rendimiento,
-       fecha, observaciones || null, req.usuario.id]
+       limpiarFecha(fecha), observaciones || null, req.usuario.id]
     );
 
     const [nuevo] = await pool.query(
