@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Search, UserCheck, Edit2, Trash2, X, Save } from 'lucide-react'
+import { Plus, UserCheck, Edit2, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { conductoresAPI } from '../services/api'
 import { formatCOP, formatFecha } from '../utils/format'
@@ -15,11 +15,10 @@ const FORM_INICIAL = {
   salario_base:'', auxilio_transporte:'', comisiones:'', observaciones:''
 }
 
-// Limpia fechas ISO a formato YYYY-MM-DD que acepta MySQL
 const limpiarFecha = (fecha) => {
-  if (!fecha) return null
+  if (!fecha) return ''
   if (typeof fecha === 'string' && fecha.includes('T')) return fecha.split('T')[0]
-  return fecha || null
+  return fecha || ''
 }
 
 function Modal({ titulo, onClose, children }) {
@@ -46,76 +45,76 @@ function FormConductor({ inicial, onGuardar, onCancelar, cargando }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Nombres *</label>
-          <input value={form.nombres} onChange={e => set('nombres', e.target.value)} className="input" placeholder="Juan Carlos" />
+          <input value={form.nombres ?? ''} onChange={e => set('nombres', e.target.value)} className="input" placeholder="Juan Carlos" />
         </div>
         <div>
           <label className="label">Apellidos *</label>
-          <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} className="input" placeholder="Pérez García" />
+          <input value={form.apellidos ?? ''} onChange={e => set('apellidos', e.target.value)} className="input" placeholder="Pérez García" />
         </div>
         <div>
           <label className="label">Tipo documento</label>
-          <select value={form.tipo_documento} onChange={e => set('tipo_documento', e.target.value)} className="input">
+          <select value={form.tipo_documento ?? 'CC'} onChange={e => set('tipo_documento', e.target.value)} className="input">
             {TIPOS_DOC.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div>
           <label className="label">Número documento *</label>
-          <input value={form.numero_documento} onChange={e => set('numero_documento', e.target.value)} className="input" placeholder="12345678" />
+          <input value={form.numero_documento ?? ''} onChange={e => set('numero_documento', e.target.value)} className="input" placeholder="12345678" />
         </div>
         <div>
           <label className="label">Teléfono</label>
-          <input value={form.telefono} onChange={e => set('telefono', e.target.value)} className="input" placeholder="3001234567" />
+          <input value={form.telefono ?? ''} onChange={e => set('telefono', e.target.value)} className="input" placeholder="3001234567" />
         </div>
         <div>
           <label className="label">Email</label>
-          <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="input" />
+          <input type="email" value={form.email ?? ''} onChange={e => set('email', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Ciudad</label>
-          <input value={form.ciudad} onChange={e => set('ciudad', e.target.value)} className="input" placeholder="Bogotá" />
+          <input value={form.ciudad ?? ''} onChange={e => set('ciudad', e.target.value)} className="input" placeholder="Bogotá" />
         </div>
         <div>
           <label className="label">Dirección</label>
-          <input value={form.direccion} onChange={e => set('direccion', e.target.value)} className="input" />
+          <input value={form.direccion ?? ''} onChange={e => set('direccion', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">N° Licencia</label>
-          <input value={form.numero_licencia} onChange={e => set('numero_licencia', e.target.value)} className="input" />
+          <input value={form.numero_licencia ?? ''} onChange={e => set('numero_licencia', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Categoría licencia</label>
-          <input value={form.categoria_licencia} onChange={e => set('categoria_licencia', e.target.value)} className="input" placeholder="C2, C3..." />
+          <input value={form.categoria_licencia ?? ''} onChange={e => set('categoria_licencia', e.target.value)} className="input" placeholder="C2, C3..." />
         </div>
         <div>
           <label className="label">Vencimiento licencia</label>
-          <input type="date" value={limpiarFecha(form.vencimiento_licencia) || ''} onChange={e => set('vencimiento_licencia', e.target.value)} className="input" />
+          <input type="date" value={limpiarFecha(form.vencimiento_licencia)} onChange={e => set('vencimiento_licencia', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Fecha ingreso</label>
-          <input type="date" value={limpiarFecha(form.fecha_ingreso) || ''} onChange={e => set('fecha_ingreso', e.target.value)} className="input" />
+          <input type="date" value={limpiarFecha(form.fecha_ingreso)} onChange={e => set('fecha_ingreso', e.target.value)} className="input" />
         </div>
         <div>
           <label className="label">Tipo contrato</label>
-          <select value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)} className="input">
+          <select value={form.tipo_contrato ?? 'indefinido'} onChange={e => set('tipo_contrato', e.target.value)} className="input">
             {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
           </select>
         </div>
         <div>
           <label className="label">Salario base</label>
-          <input type="number" value={form.salario_base} onChange={e => set('salario_base', e.target.value)} className="input" placeholder="3000000" />
+          <input type="number" value={form.salario_base ?? ''} onChange={e => set('salario_base', e.target.value)} className="input" placeholder="3000000" />
         </div>
         <div>
           <label className="label">Auxilio transporte</label>
-          <input type="number" value={form.auxilio_transporte} onChange={e => set('auxilio_transporte', e.target.value)} className="input" placeholder="200000" />
+          <input type="number" value={form.auxilio_transporte ?? ''} onChange={e => set('auxilio_transporte', e.target.value)} className="input" placeholder="200000" />
         </div>
         <div>
           <label className="label">Comisiones</label>
-          <input type="number" value={form.comisiones || ''} onChange={e => set('comisiones', e.target.value)} className="input" placeholder="0" />
+          <input type="number" value={form.comisiones ?? ''} onChange={e => set('comisiones', e.target.value)} className="input" placeholder="0" />
         </div>
       </div>
       <div>
         <label className="label">Observaciones</label>
-        <textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} className="input resize-none" />
+        <textarea value={form.observaciones ?? ''} onChange={e => set('observaciones', e.target.value)} rows={2} className="input resize-none" />
       </div>
       <div className="flex gap-3 justify-end pt-2">
         <button onClick={onCancelar} className="btn-secondary">Cancelar</button>
@@ -164,8 +163,11 @@ export default function Conductores() {
     try {
       await conductoresAPI.crear({
         ...form,
-        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia),
-        fecha_ingreso: limpiarFecha(form.fecha_ingreso),
+        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia) || null,
+        fecha_ingreso:        limpiarFecha(form.fecha_ingreso) || null,
+        salario_base:         parseFloat(form.salario_base || 0),
+        auxilio_transporte:   parseFloat(form.auxilio_transporte || 0),
+        comisiones:           parseFloat(form.comisiones || 0),
       })
       toast.success('Conductor creado correctamente')
       setModal(null)
@@ -189,8 +191,8 @@ export default function Conductores() {
         direccion:            form.direccion,
         numero_licencia:      form.numero_licencia,
         categoria_licencia:   form.categoria_licencia,
-        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia),  // ← FIX: limpia ISO a YYYY-MM-DD
-        fecha_ingreso:        limpiarFecha(form.fecha_ingreso),          // ← FIX: limpia ISO a YYYY-MM-DD
+        vencimiento_licencia: limpiarFecha(form.vencimiento_licencia) || null,
+        fecha_ingreso:        limpiarFecha(form.fecha_ingreso) || null,
         tipo_contrato:        form.tipo_contrato,
         salario_base:         parseFloat(form.salario_base || 0),
         auxilio_transporte:   parseFloat(form.auxilio_transporte || 0),
@@ -251,24 +253,24 @@ export default function Conductores() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {cargando ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                <tr><td colSpan={8} style={{ textAlign:'center', padding:40, color:'#9ca3af' }}>
                   <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-2" />
                   Cargando...
                 </td></tr>
               ) : conductores.length === 0 ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                <tr><td colSpan={8} style={{ textAlign:'center', padding:40, color:'#9ca3af', fontSize:13 }}>
                   No hay conductores.{' '}
-                  <button onClick={() => setModal('nuevo')} className="text-primary-600 hover:underline">Agregar el primero</button>
+                  <button onClick={() => setModal('nuevo')} style={{ color:'#4f46e5', background:'none', border:'none', cursor:'pointer' }}>Agregar el primero</button>
                 </td></tr>
               ) : conductores.map(c => (
                 <tr key={c.id} style={{ borderBottom:'1px solid #f3f4f6' }}
                   onMouseEnter={e => e.currentTarget.style.background='#f9fafb'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                   <td style={{ padding:'10px 20px' }}>
-                    <p style={{ fontWeight:600, color:'#111827' }}>{c.nombres} {c.apellidos}</p>
-                    <p style={{ fontSize:11, color:'#9ca3af' }}>{c.ciudad || '—'}</p>
+                    <p style={{ fontWeight:600, color:'#111827', margin:0 }}>{c.nombres} {c.apellidos}</p>
+                    <p style={{ fontSize:11, color:'#9ca3af', margin:0 }}>{c.ciudad || '—'}</p>
                   </td>
                   <td style={{ padding:'10px 20px', color:'#374151' }}>
                     <span style={{ fontSize:11, color:'#9ca3af' }}>{c.tipo_documento} </span>
