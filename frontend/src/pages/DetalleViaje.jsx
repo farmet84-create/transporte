@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, TrendingDown, Truck, User, Building2, MapPin, Plus, Trash2, Edit2, Save, X, Fuel } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -45,6 +45,20 @@ const FilaCosto = ({ label, valor, color = 'gray', sub }) => (
   </div>
 )
 
+// FIX: extrae YYYY-MM-DD sin conversión de zona horaria
+const soloFecha = (val) => {
+  if (!val) return ''
+  return val.substring(0, 10)
+}
+
+// FIX: extrae HH:MM sin conversión de zona horaria
+const soloHora = (val) => {
+  if (!val) return ''
+  if (val.length <= 5) return val
+  // Si viene como "HH:MM:SS" extraer solo HH:MM
+  return val.substring(0, 5)
+}
+
 export default function DetalleViaje() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -56,11 +70,9 @@ export default function DetalleViaje() {
   const [formViaje, setFormViaje] = useState({})
   const setF = (k, v) => setFormViaje(f => ({ ...f, [k]: v }))
 
-  // Nuevo gasto
-  const [nuevoGasto, setNuevoGasto]       = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  const [nuevoGasto, setNuevoGasto]         = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
   const [agregandoGasto, setAgregandoGasto] = useState(false)
 
-  // Nuevo combustible
   const COMB_INICIAL = { nombre_estacion: '', km_inicial: '', km_final: '', valor_galon: '', fecha: new Date().toISOString().substring(0,10), observaciones: '' }
   const [nuevoComb, setNuevoComb]         = useState(COMB_INICIAL)
   const [agregandoComb, setAgregandoComb] = useState(false)
@@ -88,7 +100,6 @@ export default function DetalleViaje() {
   const colorPct = v => v >= 20 ? 'text-green-600' : v >= 10 ? 'text-yellow-600' : v >= 0 ? 'text-orange-500' : 'text-red-600'
   const bgPct    = v => v >= 20 ? 'border-green-200 bg-green-50' : v >= 0 ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'
 
-  // Total combustible
   const totalCombustible = (viaje?.combustible || []).reduce((s, c) => s + parseFloat(c.valor_total || 0), 0)
   const totalGalones     = (viaje?.combustible || []).reduce((s, c) => s + parseFloat(c.galones_gastados || 0), 0)
 
@@ -105,36 +116,17 @@ export default function DetalleViaje() {
   const guardarViaje = async () => {
     setGuardando(true)
     try {
-      // Función para extraer fecha local sin problemas de zona horaria
-      const fechaLocal = (val) => {
-        if (!val) return null
-        if (val.includes('T')) {
-          // Es un datetime ISO, extraer solo fecha local
-          const d = new Date(val)
-          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-        }
-        return val.substring(0, 10)
-      }
-      const horaLocal = (val) => {
-        if (!val) return null
-        if (val.includes('T')) {
-          const d = new Date(val)
-          return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-        }
-        return val.substring(0, 5)
-      }
-
-      const res = await viajesAPI.actualizar(id, {
+      await viajesAPI.actualizar(id, {
         cliente_id:           formViaje.cliente_id,
         origen:               formViaje.origen,
         destino:              formViaje.destino,
-        fecha_salida:         fechaLocal(formViaje.fecha_salida),
-        hora_salida:          horaLocal(formViaje.hora_salida),
-        fecha_llegada:        fechaLocal(formViaje.fecha_llegada),
-        hora_llegada:         horaLocal(formViaje.hora_llegada),
+        fecha_salida:         soloFecha(formViaje.fecha_salida),
+        hora_salida:          soloHora(formViaje.hora_salida),
+        fecha_llegada:        soloFecha(formViaje.fecha_llegada) || null,
+        hora_llegada:         soloHora(formViaje.hora_llegada) || null,
         km_recorridos:        formViaje.km_recorridos,
         numero_manifiesto:    formViaje.numero_manifiesto,
-        fecha_manifiesto:     fechaLocal(formViaje.fecha_manifiesto),
+        fecha_manifiesto:     soloFecha(formViaje.fecha_manifiesto) || null,
         tipo_carga:           formViaje.tipo_carga,
         peso_carga_kg:        formViaje.peso_carga_kg,
         valor_manifiesto:     parseFloat(formViaje.valor_manifiesto || 0),
@@ -155,7 +147,7 @@ export default function DetalleViaje() {
     if (!nuevoGasto.valor || parseFloat(nuevoGasto.valor) <= 0) { toast.error('Ingresa un valor válido'); return }
     setAgregandoGasto(true)
     try {
-      await viajesAPI.agregarGasto(id, { ...nuevoGasto, valor: parseFloat(nuevoGasto.valor), fecha: viaje.fecha_salida?.substring(0,10) })
+      await viajesAPI.agregarGasto(id, { ...nuevoGasto, valor: parseFloat(nuevoGasto.valor), fecha: soloFecha(viaje.fecha_salida) })
       toast.success('Gasto agregado')
       setNuevoGasto({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
       cargar()
@@ -196,9 +188,8 @@ export default function DetalleViaje() {
     } catch { toast.error('Error al eliminar') }
   }
 
-  // Calcular vista previa combustible
-  const kmComb    = nuevoComb.km_final && nuevoComb.km_inicial ? parseFloat(nuevoComb.km_final) - parseFloat(nuevoComb.km_inicial) : 0
-  const rendViaje = parseFloat(viaje?.rendimiento_km_galon || 0)
+  const kmComb       = nuevoComb.km_final && nuevoComb.km_inicial ? parseFloat(nuevoComb.km_final) - parseFloat(nuevoComb.km_inicial) : 0
+  const rendViaje    = parseFloat(viaje?.rendimiento_km_galon || 0)
   const galonesEstim = rendViaje > 0 && kmComb > 0 ? (kmComb / rendViaje) : 0
   const valorEstim   = galonesEstim > 0 && nuevoComb.valor_galon ? galonesEstim * parseFloat(nuevoComb.valor_galon) : 0
 
@@ -305,18 +296,30 @@ export default function DetalleViaje() {
                     {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                <div><label className="label">Fecha salida</label>
-                  <input type="date" value={formViaje.fecha_salida ? (formViaje.fecha_salida.includes('T') ? new Date(formViaje.fecha_salida).toLocaleDateString('en-CA') : formViaje.fecha_salida.substring(0,10)) : ''} onChange={e => setF('fecha_salida', e.target.value)} className="input" /></div>
-                <div><label className="label">Hora salida</label>
-                  <input type="time" value={formViaje.hora_salida ? (formViaje.hora_salida.includes('T') ? `${String(new Date(formViaje.hora_salida).getHours()).padStart(2,'0')}:${String(new Date(formViaje.hora_salida).getMinutes()).padStart(2,'0')}` : formViaje.hora_salida.substring(0,5)) : ''} onChange={e => setF('hora_salida', e.target.value)} className="input" /></div>
-                <div><label className="label">Fecha llegada</label>
-                  <input type="date" value={formViaje.fecha_llegada?.substring(0,10) || ''} onChange={e => setF('fecha_llegada', e.target.value)} className="input" /></div>
-                <div><label className="label">Hora llegada</label>
-                  <input type="time" value={formViaje.hora_llegada?.substring(0,5) || ''} onChange={e => setF('hora_llegada', e.target.value)} className="input" /></div>
-                <div><label className="label">Km recorridos</label>
-                  <input type="number" value={formViaje.km_recorridos} onChange={e => setF('km_recorridos', e.target.value)} className="input" /></div>
-                <div><label className="label">Flete cobrado</label>
-                  <input type="number" value={formViaje.valor_flete_cobrado} onChange={e => setF('valor_flete_cobrado', e.target.value)} className="input" /></div>
+                <div>
+                  <label className="label">Fecha salida</label>
+                  <input type="date" value={soloFecha(formViaje.fecha_salida)} onChange={e => setF('fecha_salida', e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Hora salida</label>
+                  <input type="time" value={soloHora(formViaje.hora_salida)} onChange={e => setF('hora_salida', e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Fecha llegada</label>
+                  <input type="date" value={soloFecha(formViaje.fecha_llegada)} onChange={e => setF('fecha_llegada', e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Hora llegada</label>
+                  <input type="time" value={soloHora(formViaje.hora_llegada)} onChange={e => setF('hora_llegada', e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Km recorridos</label>
+                  <input type="number" value={formViaje.km_recorridos} onChange={e => setF('km_recorridos', e.target.value)} className="input" />
+                </div>
+                <div>
+                  <label className="label">Flete cobrado</label>
+                  <input type="number" value={formViaje.valor_flete_cobrado} onChange={e => setF('valor_flete_cobrado', e.target.value)} className="input" />
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -374,7 +377,7 @@ export default function DetalleViaje() {
                 <div><label className="label">Número manifiesto</label>
                   <input value={formViaje.numero_manifiesto || ''} onChange={e => setF('numero_manifiesto', e.target.value)} className="input" /></div>
                 <div><label className="label">Fecha manifiesto</label>
-                  <input type="date" value={formViaje.fecha_manifiesto?.substring(0,10) || ''} onChange={e => setF('fecha_manifiesto', e.target.value)} className="input" /></div>
+                  <input type="date" value={soloFecha(formViaje.fecha_manifiesto)} onChange={e => setF('fecha_manifiesto', e.target.value)} className="input" /></div>
                 <div><label className="label">Tipo de carga</label>
                   <input value={formViaje.tipo_carga || ''} onChange={e => setF('tipo_carga', e.target.value)} className="input" /></div>
                 <div><label className="label">Peso (kg)</label>
@@ -418,7 +421,6 @@ export default function DetalleViaje() {
               )}
             </div>
 
-            {/* Formulario agregar carga */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
               <p className="text-sm font-medium text-amber-800 mb-3">Registrar carga de combustible</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -454,7 +456,6 @@ export default function DetalleViaje() {
                 </div>
               </div>
 
-              {/* Vista previa del cálculo */}
               {kmComb > 0 && rendViaje > 0 && (
                 <div className="mt-3 bg-white rounded-lg p-3 border border-amber-200 grid grid-cols-3 gap-3 text-center text-sm">
                   <div>
@@ -482,7 +483,6 @@ export default function DetalleViaje() {
               </div>
             </div>
 
-            {/* Lista de cargas */}
             {viaje.combustible?.length > 0 ? (
               <div className="space-y-2">
                 {viaje.combustible.map(c => (
