@@ -97,7 +97,7 @@ async function dashboard(req, res, next) {
 }
 
 // GET /api/reportes/rentabilidad-vehiculo
-// Incluye: costos del viaje + costos operación mensual vehículo + salario conductor + costos admin
+// Calcula igual que Excel: gastos directos + costos manifiesto (descuento)
 async function rentabilidadPorVehiculo(req, res, next) {
   try {
     const empresaId = req.usuario.empresa_id;
@@ -109,7 +109,6 @@ async function rentabilidadPorVehiculo(req, res, next) {
     if (mes)   { where += ' AND MONTH(v.fecha_salida) = ?'; params.push(parseInt(mes)); }
     if (placa) { where += ' AND vh.placa LIKE ?';           params.push(`%${placa.toUpperCase()}%`); }
 
-    // 1. Datos base de viajes por vehículo
     const anioNum = parseInt(anio) || new Date().getFullYear()
     const mesNum  = parseInt(mes)  || new Date().getMonth() + 1
 
@@ -120,74 +119,31 @@ async function rentabilidadPorVehiculo(req, res, next) {
           CONCAT(vh.marca,' ',vh.modelo) AS vehiculo,
           ? AS anio,
           ? AS mes,
-          COUNT(v.id)                     AS total_viajes,
-          SUM(v.km_recorridos)            AS total_km,
-          SUM(v.valor_flete_cobrado)      AS total_ingresos,
-          SUM(v.total_gastos_directos)    AS total_gastos_directos,
-          SUM(v.costo_admin_aplicado)     AS total_costo_admin_viajes,
-          (SELECT c2.id FROM viajes v2
-           INNER JOIN conductores c2 ON c2.id = v2.conductor_id
-           WHERE v2.vehiculo_id = vh.id AND v2.empresa_id = ?
-             AND YEAR(v2.fecha_salida) = ? AND MONTH(v2.fecha_salida) = ?
-             AND v2.eliminado_en IS NULL
-           GROUP BY c2.id ORDER BY COUNT(*) DESC LIMIT 1
-          ) AS conductor_id_principal
+          COUNT(v.id)                        AS total_viajes,
+          SUM(v.km_recorridos)               AS total_km,
+          SUM(v.valor_flete_cobrado)         AS total_ingresos,
+          SUM(v.total_gastos_directos)       AS total_gastos_directos,
+          SUM(COALESCE(v.descuento_manifiesto, 0)) AS total_descuento_manifiesto
        FROM viajes v
        INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
        ${where}
        GROUP BY vh.id, vh.placa, vh.marca, vh.modelo
        ORDER BY total_ingresos DESC`,
-      [anioNum, mesNum, empresaId, anioNum, mesNum, ...params]
+      [anioNum, mesNum, ...params]
     );
 
-    // 2. Para cada vehículo, obtener costos mensuales y salario conductor
-    const resultado = await Promise.all(viajes.map(async (v) => {
-      // Costo operación mensual del vehículo
-      const [[costoOp]] = await pool.query(
-        `SELECT COALESCE(SUM(
-            llantas + mantenimiento_preventivo + mantenimiento_correctivo +
-            aceites_filtros + depreciacion + seguros + soat + tecnomecanica +
-            impuestos + otros
-          ), 0) AS total_operacion
-         FROM costos_operacion_mensual
-         WHERE empresa_id = ? AND vehiculo_id = ? AND anio = ? AND mes = ?`,
-        [empresaId, v.vehiculo_id, anioNum, mesNum]
-      );
-
-      // Costos administrativos del mes (prorrateados por número de viajes del vehículo)
-      const [[costoAdm]] = await pool.query(
-        `SELECT COALESCE(salarios_conductores + prestaciones + seguridad_social +
-            administracion + contabilidad + arrendamiento + servicios_publicos +
-            comunicaciones + otros, 0) AS total_admin,
-            COALESCE(total_viajes_mes, 1) AS total_viajes_mes
-         FROM costos_administrativos_mensual
-         WHERE empresa_id = ? AND anio = ? AND mes = ?
-         LIMIT 1`,
-        [empresaId, anioNum, mesNum]
-      );
-
-      // Salario + prestaciones del conductor principal
-      let costoConduc = 0;
-      if (v.conductor_id_principal) {
-        const [[conduc]] = await pool.query(
-          `SELECT COALESCE(salario_base, 0) + COALESCE(auxilio_transporte, 0) + COALESCE(comisiones, 0) AS total_nomina
-           FROM conductores WHERE id = ?`,
-          [v.conductor_id_principal]
-        );
-        costoConduc = parseFloat(conduc?.total_nomina || 0);
-      }
-
-      const costoOperacionMensual = parseFloat(costoOp?.total_operacion || 0);
-      const totalViajesMes        = parseInt(costoAdm?.total_viajes_mes || 1);
-      const costoAdminProrrateo   = parseFloat(costoAdm?.total_admin || 0) / totalViajesMes * parseInt(v.total_viajes);
-      const costoGastoDirectos    = parseFloat(v.total_gastos_directos || 0);
-
-      // Total costos completo
-      const totalCostosCompleto = costoGastoDirectos + costoOperacionMensual + costoConduc + costoAdminProrrateo;
-      const totalIngresos       = parseFloat(v.total_ingresos || 0);
-      const utilidadReal        = totalIngresos - totalCostosCompleto;
-      const rentabilidadReal    = totalIngresos > 0
-        ? parseFloat(((utilidadReal / totalIngresos) * 100).toFixed(2))
+    const resultado = viajes.map((v) => {
+      const totalIngresos        = parseFloat(v.total_ingresos || 0)
+      const costoGastoDirectos   = parseFloat(v.total_gastos_directos || 0)
+      const costoManifiesto      = parseFloat(v.total_descuento_manifiesto || 0)
+      // igual que Excel: TOTAL COSTOS = COSTO VIAJE + COSTOS MANIFIESTO
+      const totalCostos          = costoGastoDirectos + costoManifiesto
+      const utilidad             = totalIngresos - totalCostos
+      const margen               = totalIngresos > 0
+        ? parseFloat(((utilidad / totalIngresos) * 100).toFixed(2))
+        : 0
+      const rentabilidad         = totalCostos > 0
+        ? parseFloat(((utilidad / totalCostos) * 100).toFixed(2))
         : 0
 
       return {
@@ -199,17 +155,13 @@ async function rentabilidadPorVehiculo(req, res, next) {
         total_viajes:             v.total_viajes,
         total_km:                 v.total_km,
         total_ingresos:           totalIngresos,
-        // Desglose de costos
         costos_gastos_directos:   costoGastoDirectos,
-        costos_operacion_mensual: costoOperacionMensual,
-        costos_conductor:         costoConduc,
-        costos_admin_prorrateo:   parseFloat(costoAdminProrrateo.toFixed(2)),
-        total_costos:             parseFloat(totalCostosCompleto.toFixed(2)),
-        // Utilidad y rentabilidad REAL
-        total_utilidad:           parseFloat(utilidadReal.toFixed(2)),
-        rentabilidad_promedio_pct: rentabilidadReal,
-      };
-    }));
+        costos_manifiesto:        costoManifiesto,
+        total_costos:             parseFloat(totalCostos.toFixed(2)),
+        total_utilidad:           parseFloat(utilidad.toFixed(2)),
+        rentabilidad_promedio_pct: margen,  // % Margen = Utilidad / Flete
+      }
+    })
 
     return ok(res, resultado);
   } catch (err) { next(err); }
@@ -231,19 +183,18 @@ async function rentabilidadPorConductor(req, res, next) {
           c.id AS conductor_id,
           CONCAT(c.nombres,' ',c.apellidos) AS conductor,
           c.numero_documento,
-          COALESCE(c.salario_base, 0) + COALESCE(c.auxilio_transporte, 0) + COALESCE(c.comisiones, 0) AS costo_nomina,
           COUNT(v.id)                       AS total_viajes,
           SUM(v.km_recorridos)              AS total_km,
           SUM(v.valor_flete_cobrado)        AS total_ingresos,
           SUM(v.total_gastos_directos)      AS total_gastos_directos,
-          SUM(v.total_costos)               AS total_costos_viajes,
-          SUM(v.utilidad_neta)              AS total_utilidad,
-          ROUND(AVG(v.rentabilidad_pct),2)  AS rentabilidad_promedio_pct
+          SUM(COALESCE(v.descuento_manifiesto,0)) AS total_descuento_manifiesto,
+          SUM(v.total_gastos_directos + COALESCE(v.descuento_manifiesto,0)) AS total_costos,
+          SUM(v.valor_flete_cobrado - v.total_gastos_directos - COALESCE(v.descuento_manifiesto,0)) AS total_utilidad,
+          ROUND(AVG((v.valor_flete_cobrado - v.total_gastos_directos - COALESCE(v.descuento_manifiesto,0)) / NULLIF(v.valor_flete_cobrado,0) * 100), 2) AS rentabilidad_promedio_pct
        FROM viajes v
        INNER JOIN conductores c ON c.id = v.conductor_id
        ${where}
-       GROUP BY c.id, c.nombres, c.apellidos, c.numero_documento,
-                c.salario_base, c.auxilio_transporte, c.comisiones
+       GROUP BY c.id, c.nombres, c.apellidos, c.numero_documento
        ORDER BY rentabilidad_promedio_pct DESC`,
       params
     );
@@ -268,9 +219,9 @@ async function rentabilidadPorCliente(req, res, next) {
           cl.id AS cliente_id, cl.razon_social AS cliente, cl.nit,
           COUNT(v.id)                       AS total_viajes,
           SUM(v.valor_flete_cobrado)        AS total_facturado,
-          SUM(v.total_costos)               AS total_costos,
-          SUM(v.utilidad_neta)              AS total_utilidad,
-          ROUND(AVG(v.rentabilidad_pct),2)  AS rentabilidad_promedio_pct
+          SUM(v.total_gastos_directos + COALESCE(v.descuento_manifiesto,0)) AS total_costos,
+          SUM(v.valor_flete_cobrado - v.total_gastos_directos - COALESCE(v.descuento_manifiesto,0)) AS total_utilidad,
+          ROUND(AVG((v.valor_flete_cobrado - v.total_gastos_directos - COALESCE(v.descuento_manifiesto,0)) / NULLIF(v.valor_flete_cobrado,0) * 100), 2) AS rentabilidad_promedio_pct
        FROM viajes v
        INNER JOIN clientes cl ON cl.id = v.cliente_id
        ${where}
@@ -294,9 +245,9 @@ async function evolucionMensual(req, res, next) {
           MONTH(fecha_salida)              AS mes,
           COUNT(*)                         AS total_viajes,
           SUM(valor_flete_cobrado)         AS total_ingresos,
-          SUM(total_costos)                AS total_costos,
-          SUM(utilidad_neta)               AS total_utilidad,
-          ROUND(AVG(rentabilidad_pct), 2)  AS rentabilidad_promedio
+          SUM(total_gastos_directos + COALESCE(descuento_manifiesto,0)) AS total_costos,
+          SUM(valor_flete_cobrado - total_gastos_directos - COALESCE(descuento_manifiesto,0)) AS total_utilidad,
+          ROUND(AVG((valor_flete_cobrado - total_gastos_directos - COALESCE(descuento_manifiesto,0)) / NULLIF(valor_flete_cobrado,0) * 100), 2) AS rentabilidad_promedio
        FROM viajes
        WHERE empresa_id = ? AND YEAR(fecha_salida) = ?
          AND estado = 'completado' AND eliminado_en IS NULL
