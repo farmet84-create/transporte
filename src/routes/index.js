@@ -3,16 +3,27 @@
 const { Router } = require('express');
 const { autenticar, autorizar } = require('../middlewares/auth');
 
-const auth      = require('../controllers/authController');
-const vehiculos = require('../controllers/vehiculosController');
-const viajes    = require('../controllers/viajesController');
-const costos    = require('../controllers/costosController');
-const reportes  = require('../controllers/reportesController');
-const admin     = require('../controllers/adminController');
-const alertas   = require('../controllers/alertasController');
-const { pool }  = require('../config/database');
+const auth        = require('../controllers/authController');
+const vehiculos   = require('../controllers/vehiculosController');
+const viajes      = require('../controllers/viajesController');
+const costos      = require('../controllers/costosController');
+const reportes    = require('../controllers/reportesController');
+const admin       = require('../controllers/adminController');
+const alertas     = require('../controllers/alertasController');
+const suscripcion = require('../controllers/suscripcionController');
+const { verificarSuscripcion } = require('../middlewares/verificarSuscripcion');
+const { pool }    = require('../config/database');
 
 const router = Router();
+
+// ─── WEBHOOK SUSCRIPCIÓN (público, sin JWT) ──────────────────────────────────
+router.post('/suscripcion/webhook', suscripcion.webhook);
+
+// ─── MIDDLEWARE SUSCRIPCIÓN (aplica a todas las rutas autenticadas) ──────────
+router.use((req, res, next) => {
+  if (!req.usuario) return next();
+  return verificarSuscripcion(req, res, next);
+});
 
 // ─── AUTH ────────────────────────────────────────────────
 router.post('/auth/login',            auth.login);
@@ -209,5 +220,10 @@ router.get ('/admin/usuarios',     autenticar, autorizar('admin'), admin.listarU
 router.post('/admin/usuarios',     autenticar, autorizar('admin'), admin.crearUsuario);
 router.put ('/admin/usuarios/:id', autenticar, autorizar('admin'), admin.actualizarUsuario);
 router.get ('/admin/auditoria',    autenticar, autorizar('admin'), admin.listarAuditoria);
+
+// ─── SUSCRIPCIÓN ─────────────────────────────────────────
+router.get ('/suscripcion',              autenticar, suscripcion.obtenerEstado);
+router.post('/suscripcion/generar-pago', autenticar, suscripcion.generarPago);
+router.get ('/suscripcion/pagos',        autenticar, suscripcion.listarPagos);
 
 module.exports = router;
