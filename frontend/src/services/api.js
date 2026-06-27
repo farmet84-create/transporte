@@ -22,6 +22,11 @@ api.interceptors.response.use(
       localStorage.removeItem('usuario')
       window.location.href = '/login'
     }
+    if (err.response?.status === 403 && err.response?.data?.bloqueado === true) {
+      window.dispatchEvent(new CustomEvent('suscripcion:bloqueada', {
+        detail: err.response.data
+      }))
+    }
     return Promise.reject(err)
   }
 )
@@ -83,6 +88,12 @@ export const reportesAPI = {
   porConductor:     (params) => api.get('/reportes/rentabilidad-conductor', { params }),
   porCliente:       (params) => api.get('/reportes/rentabilidad-cliente', { params }),
   evolucionMensual: (params) => api.get('/reportes/evolucion-mensual', { params }),
+}
+
+export const suscripcionAPI = {
+  obtenerEstado:  () => api.get('/suscripcion'),
+  generarPago:    () => api.post('/suscripcion/generar-pago'),
+  listarPagos:    () => api.get('/suscripcion/pagos'),
 }
 
 export default api
