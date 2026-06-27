@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import useAuthStore from './store/authStore'
@@ -14,6 +15,8 @@ import Costos       from './pages/Costos'
 import Reportes     from './pages/Reportes'
 import Admin        from './pages/Admin'
 import Alertas      from './pages/Alertas'
+import Suscripcion  from './pages/Suscripcion'
+import BloqueoSuscripcion from './components/BloqueoSuscripcion'
 
 function Privada({ children }) {
   const { token } = useAuthStore()
@@ -21,12 +24,21 @@ function Privada({ children }) {
 }
 
 export default function App() {
+  const [bloqueo, setBloqueo] = useState(null)
+
+  useEffect(() => {
+    const handler = (e) => setBloqueo(e.detail)
+    window.addEventListener('suscripcion:bloqueada', handler)
+    return () => window.removeEventListener('suscripcion:bloqueada', handler)
+  }, [])
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{
         duration: 4000,
         style: { borderRadius: '10px', fontSize: '14px' }
       }} />
+      {bloqueo && <BloqueoSuscripcion detalle={bloqueo} />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -42,6 +54,7 @@ export default function App() {
           <Route path="/reportes"     element={<Reportes />} />
           <Route path="/admin"        element={<Admin />} />
           <Route path="/alertas"      element={<Alertas />} />
+          <Route path="/suscripcion"  element={<Suscripcion />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
