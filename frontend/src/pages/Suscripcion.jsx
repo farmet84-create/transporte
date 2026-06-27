@@ -22,8 +22,8 @@ export default function Suscripcion() {
 
   useEffect(() => {
     const resultado = searchParams.get('pago')
-    if (resultado === 'exitoso')  toast.success('¡Pago realizado! Tu suscripción se activará en unos momentos.')
-    if (resultado === 'fallido')  toast.error('El pago no fue procesado. Intenta de nuevo.')
+    if (resultado === 'exitoso') toast.success('¡Pago realizado! Tu suscripción se activará en unos momentos.')
+    if (resultado === 'fallido') toast.error('El pago no fue procesado. Intenta de nuevo.')
     if (resultado === 'pendiente') toast('Pago pendiente de confirmación.', { icon: '⏳' })
   }, [])
 
@@ -122,4 +122,18 @@ export default function Suscripcion() {
                     <td style={{ padding: '12px 12px', color: '#374151' }}>{formatFecha(p.fecha_pago)}</td>
                     <td style={{ padding: '12px 12px', color: '#374151' }}>{formatFecha(p.periodo_desde)} — {formatFecha(p.periodo_hasta)}</td>
                     <td style={{ padding: '12px 12px', fontWeight: 700, color: '#111827' }}>${p.monto_usd} USD</td>
-       
+                    <td style={{ padding: '12px 12px' }}>
+                      <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: p.estado === 'aprobado' ? '#f0fdf4' : '#fef2f2', color: p.estado === 'aprobado' ? '#15803d' : '#dc2626' }}>
+                        {p.estado === 'aprobado' ? 'Aprobado' : p.estado}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
