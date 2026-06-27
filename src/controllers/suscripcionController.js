@@ -52,7 +52,7 @@ async function listarPagos(req, res, next) {
     const empresaId = req.usuario.empresa_id;
     const [rows] = await pool.query(
       `SELECT id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta, creado_en
-       FROM pagos WHERE empresa_id = ? ORDER BY creado_en DESC LIMIT 24`,
+       FROM suscripcion_pagos WHERE empresa_id = ? ORDER BY creado_en DESC LIMIT 24`,
       [empresaId]
     );
     return ok(res, rows);
@@ -68,22 +68,29 @@ async function webhook(req, res, next) {
     if (pago.status !== 'approved') return res.status(200).json({ ok: true });
     const empresaId = pago.metadata?.empresa_id;
     if (!empresaId) return res.status(200).json({ ok: true });
-    const [existe] = await pool.query('SELECT id FROM pagos WHERE mp_payment_id = ?', [String(data.id)]);
+    const [existe] = await pool.query('SELECT id FROM suscripcion_pagos WHERE mp_payment_id = ?', [String(data.id)]);
     if (existe.length) return res.status(200).json({ ok: true });
     const hoy = new Date();
     const periodoDesde = hoy.toISOString().slice(0, 10);
     const fechaHasta = new Date(hoy); fechaHasta.setDate(fechaHasta.getDate() + 30);
     const periodoHasta = fechaHasta.toISOString().slice(0, 10);
     await pool.query(
-      `INSERT INTO pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta) VALUES (?, ?, ?, ?, 'aprobado', NOW(), ?, ?)`,
+      `INSERT INTO suscripcion_pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta)
+       VALUES (?, ?, ?, ?, 'aprobado', NOW(), ?, ?)`,
       [nuevoUuid(), empresaId, String(data.id), pago.transaction_amount || 395, periodoDesde, periodoHasta]
     );
     const [subs] = await pool.query('SELECT fecha_vencimiento FROM suscripciones WHERE empresa_id = ?', [empresaId]);
     if (subs.length) {
       const base = subs[0].fecha_vencimiento > periodoDesde ? subs[0].fecha_vencimiento : periodoDesde;
-      await pool.query(`UPDATE suscripciones SET estado = 'activo', fecha_vencimiento = DATE_ADD(?, INTERVAL 30 DAY), mp_preference_id = NULL, actualizado_en = NOW() WHERE empresa_id = ?`, [base, empresaId]);
+      await pool.query(
+        `UPDATE suscripciones SET estado = 'activo', fecha_vencimiento = DATE_ADD(?, INTERVAL 30 DAY), mp_preference_id = NULL, actualizado_en = NOW() WHERE empresa_id = ?`,
+        [base, empresaId]
+      );
     } else {
-      await pool.query(`INSERT INTO suscripciones (uuid, empresa_id, estado, precio_usd, fecha_inicio, fecha_vencimiento) VALUES (?, ?, 'activo', 395.00, ?, ?)`, [nuevoUuid(), empresaId, periodoDesde, periodoHasta]);
+      await pool.query(
+        `INSERT INTO suscripciones (uuid, empresa_id, estado, precio_usd, fecha_inicio, fecha_vencimiento) VALUES (?, ?, 'activo', 395.00, ?, ?)`,
+        [nuevoUuid(), empresaId, periodoDesde, periodoHasta]
+      );
     }
     logger.info('Webhook MP: suscripción renovada', { empresa_id: empresaId, payment_id: data.id });
     return res.status(200).json({ ok: true });
