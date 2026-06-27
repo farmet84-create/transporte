@@ -7,6 +7,7 @@ const { pool, verificarConexion } = require('./config/database');
 const logger    = require('./config/logger');
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const routes    = require('./routes');
+const { iniciarCron } = require('./cron/suscripcionCron');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,7 @@ app.use(errorHandler);
 const start = async () => {
   await verificarConexion();
   app.listen(PORT, () => logger.info(`🚀 Servidor en puerto ${PORT}`));
+  iniciarCron();
 };
 
 start().catch(err => {
