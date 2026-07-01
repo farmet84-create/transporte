@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { suscripcionAPI } from '../services/api'
 import { CreditCard, CheckCircle, XCircle, AlertTriangle, Download } from 'lucide-react'
@@ -78,8 +78,8 @@ export default function Suscripcion() {
 <body>
 <div class="header">
   <div>
-    <div class="logo">Waapp<span>Latam</span></div>
-    <div class="tagline">Automating Growth</div>
+    <div class="logo">Waapp<span>Business</span></div>
+    <div class="tagline">waapp.live</div>
   </div>
   <div class="invoice-meta">
     <h2>FACTURA</h2>
@@ -91,7 +91,7 @@ export default function Suscripcion() {
 <div style="display:flex;gap:48px;margin-bottom:40px;">
   <div class="section" style="flex:1">
     <h3>Emitido por</h3>
-    <p><strong>WaappLatam</strong><br/>Automatización y tecnología<br/>Colombia</p>
+    <p><strong>WaappBusiness</strong><br/>Gujarat, India<br/>GSTIN: 24DUKPS5774J1ZB<br/>waapp.live<br/>support@waapp.live<br/>+1 205 315 4423</p>
   </div>
   <div class="section" style="flex:1">
     <h3>Estado del pago</h3>
@@ -124,7 +124,7 @@ export default function Suscripcion() {
 </table>
 
 <div class="footer">
-  Pago procesado de forma segura a través de MercadoPago · WaappLatam · waapplatam.com<br/>
+  Pago procesado de forma segura a través de MercadoPago · WaappBusiness · waapp.live<br/>
   Este documento es un comprobante de pago electrónico.
 </div>
 </body>
