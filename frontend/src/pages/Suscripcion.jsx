@@ -1,8 +1,9 @@
- import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { suscripcionAPI } from '../services/api'
-import { CreditCard, CheckCircle, XCircle, AlertTriangle, Download } from 'lucide-react'
+import { CreditCard, CheckCircle, XCircle, AlertTriangle, Download, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { abrirContratoPDF } from '../utils/contratoHTML'
 
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -94,6 +95,13 @@ export default function Suscripcion() {
     <p><strong>WaappBusiness</strong><br/>Gujarat, India<br/>GSTIN: 24DUKPS5774J1ZB<br/>waapp.live<br/>support@waapp.live<br/>+1 205 315 4423</p>
   </div>
   <div class="section" style="flex:1">
+    <h3>Facturado a</h3>
+    <p><strong>COMERCIALIZADORA QUIRAL D. SAS</strong><br/>NIT: 901062379-1<br/>CR 22 66A 20, Bogotá D.C.<br/>Colombia<br/>tributacionesquirald@hotmail.com<br/>310 242 3623</p>
+  </div>
+</div>
+
+<div style="margin-bottom:24px;">
+  <div class="section">
     <h3>Estado del pago</h3>
     <p><span class="badge">✓ Aprobado</span></p>
     <p style="margin-top:8px;font-size:13px;color:#6b7280;">ID MercadoPago: ${p.mp_payment_id || '—'}</p>
@@ -161,7 +169,13 @@ export default function Suscripcion() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 24 }}>Suscripción</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: 0 }}>Suscripción</h1>
+        <button onClick={abrirContratoPDF} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: '#090d1b', color: '#fff', borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+          <FileText size={15} />
+          Descargar contrato
+        </button>
+      </div>
 
       <div style={{ background: '#fff', borderRadius: 16, padding: 28, border: `1px solid ${colorEstado}30`, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
