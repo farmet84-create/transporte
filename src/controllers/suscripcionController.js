@@ -88,7 +88,7 @@ async function listarPagos(req, res, next) {
     const [rows] = await pool.query(
       `SELECT id, mp_payment_id, monto_usd, estado, fecha_pago,
               periodo_desde, periodo_hasta, creado_en
-       FROM pagos
+       FROM suscripcion_pagos
        WHERE empresa_id = ?
        ORDER BY creado_en DESC
        LIMIT 24`,
@@ -141,7 +141,7 @@ async function webhook(req, res, next) {
 
     // Evitar duplicados
     const [existe] = await pool.query(
-      'SELECT id FROM pagos WHERE mp_payment_id = ?',
+      'SELECT id FROM suscripcion_pagos WHERE mp_payment_id = ?',
       [String(data.id)]
     );
     if (existe.length) return res.status(200).json({ ok: true });
@@ -154,7 +154,7 @@ async function webhook(req, res, next) {
     const periodoHasta = fechaHasta.toISOString().slice(0, 10);
 
     await pool.query(
-      `INSERT INTO pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta)
+      `INSERT INTO suscripcion_pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta)
        VALUES (?, ?, ?, ?, 'aprobado', NOW(), ?, ?)`,
       [nuevoUuid(), empresaId, String(data.id), pago.transaction_amount || 395, periodoDesde, periodoHasta]
     );
