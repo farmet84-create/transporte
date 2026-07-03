@@ -97,7 +97,14 @@ router.post('/conductores', autenticar, autorizar('admin','operador'), async (re
 router.put('/conductores/:id', autenticar, autorizar('admin','operador'), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const campos = req.body;
+    const CAMPOS_CONDUCTORES = ['nombres','apellidos','tipo_documento','numero_documento',
+      'telefono','email','direccion','ciudad','numero_licencia','categoria_licencia',
+      'vencimiento_licencia','fecha_ingreso','tipo_contrato','salario_base',
+      'auxilio_transporte','observaciones','activo'];
+    const campos = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => CAMPOS_CONDUCTORES.includes(k))
+    );
+    if (!Object.keys(campos).length) return res.status(400).json({ ok: false, mensaje: 'Sin campos válidos' });
     const sets = Object.keys(campos).map(k => `${k} = ?`).join(', ');
     await pool.query(`UPDATE conductores SET ${sets}, actualizado_en = NOW() WHERE id = ? AND empresa_id = ?`,
       [...Object.values(campos), id, req.usuario.empresa_id]);
@@ -169,7 +176,12 @@ router.post('/clientes', autenticar, autorizar('admin','operador'), async (req, 
 router.put('/clientes/:id', autenticar, autorizar('admin','operador'), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const campos = req.body;
+    const CAMPOS_CLIENTES = ['razon_social','nit','nombre_contacto','telefono','email',
+      'direccion','ciudad','departamento','dias_credito','limite_credito','observaciones','activo'];
+    const campos = Object.fromEntries(
+      Object.entries(req.body).filter(([k]) => CAMPOS_CLIENTES.includes(k))
+    );
+    if (!Object.keys(campos).length) return res.status(400).json({ ok: false, mensaje: 'Sin campos válidos' });
     const sets = Object.keys(campos).map(k => `${k} = ?`).join(', ');
     await pool.query(`UPDATE clientes SET ${sets}, actualizado_en = NOW() WHERE id = ? AND empresa_id = ?`,
       [...Object.values(campos), id, req.usuario.empresa_id]);
