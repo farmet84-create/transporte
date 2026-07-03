@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../config/database');
+const logger   = require('../config/logger');
 
 async function verificarSuscripcion(req, res, next) {
   try {
@@ -30,7 +31,11 @@ async function verificarSuscripcion(req, res, next) {
     req.suscripcion = { estado, dias_restantes };
     next();
   } catch (err) {
-    next();
+    logger.error('verificarSuscripcion: error consultando BD', { err: err.message });
+    return res.status(503).json({
+      ok: false,
+      mensaje: 'Servicio temporalmente no disponible. Intenta de nuevo.',
+    });
   }
 }
 
