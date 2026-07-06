@@ -122,10 +122,13 @@ async function crear(req, res, next) {
     const {
       vehiculo_id, conductor_id, cliente_id, ruta_id,
       origen, destino, fecha_salida, hora_salida, fecha_llegada, hora_llegada,
-      km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
+      km_recorridos, km_inicial, km_final,
+      numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
       valor_manifiesto, anticipo, descuento_manifiesto,
       valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
+
+    const kmNum = parseFloat(km_recorridos) || Math.max(0, parseFloat(km_final || 0) - parseFloat(km_inicial || 0));
 
     // FIX: usar anioMesDeFecha para evitar problema de zona horaria
     const { anio, mes } = anioMesDeFecha(fecha_salida)
@@ -143,7 +146,6 @@ async function crear(req, res, next) {
 
     const costoKm         = parseFloat(costoOp?.costo_por_km    || 0);
     const costoAdminViaje = parseFloat(costoAdmin?.costo_por_viaje || 0);
-    const kmNum           = parseFloat(km_recorridos || 0);
     const uuid            = nuevoUuid();
     const numeroViaje     = await generarNumeroViaje(empresaId);
 
@@ -163,7 +165,7 @@ async function crear(req, res, next) {
         vehiculo_id, conductor_id, cliente_id, ruta_id || null,
         origen, destino,
         limpiarFecha(fecha_salida),
-        hora_salida,
+        hora_salida || null,
         limpiarFecha(fecha_llegada) || null,
         hora_llegada || null,
         kmNum,
@@ -207,13 +209,13 @@ async function actualizar(req, res, next) {
 
     const {
       cliente_id, origen, destino, fecha_salida, hora_salida,
-      fecha_llegada, hora_llegada, km_recorridos,
+      fecha_llegada, hora_llegada, km_recorridos, km_inicial, km_final,
       numero_manifiesto, fecha_manifiesto, tipo_carga,
       peso_carga_kg, valor_manifiesto, anticipo, descuento_manifiesto,
       valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
-    const kmNum = parseFloat(km_recorridos || antes[0].km_recorridos);
+    const kmNum = parseFloat(km_recorridos) || Math.max(0, parseFloat(km_final || 0) - parseFloat(km_inicial || 0)) || parseFloat(antes[0].km_recorridos);
 
     // FIX: limpiar todas las fechas a YYYY-MM-DD antes de guardar
     const fechaSalidaLimpia    = limpiarFecha(fecha_salida)    || limpiarFecha(antes[0].fecha_salida)
