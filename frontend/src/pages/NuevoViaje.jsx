@@ -127,6 +127,7 @@ export default function NuevoViaje() {
         cliente_id:         parseInt(data.cliente_id),
         origen:             data.origen,
         destino:            data.destino,
+        tipo_viaje:         data.tipo_viaje,
         fecha_salida:       data.fecha_salida,
         fecha_llegada:      data.fecha_llegada || null,
         km_inicial:         parseFloat(data.km_inicial || 0),
@@ -250,6 +251,20 @@ export default function NuevoViaje() {
                 {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               {errors.destino && <p className="text-red-500 text-xs mt-1">{errors.destino.message}</p>}
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Tipo de viaje *</label>
+              <div className="flex gap-4 mt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" value="nacional" {...register('tipo_viaje', { required: 'Selecciona el tipo de viaje' })} className="w-4 h-4 text-primary-600" />
+                  <span className="text-sm font-medium text-gray-700">Nacional</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" value="urbano" {...register('tipo_viaje', { required: 'Selecciona el tipo de viaje' })} className="w-4 h-4 text-primary-600" />
+                  <span className="text-sm font-medium text-gray-700">Urbano</span>
+                </label>
+              </div>
+              {errors.tipo_viaje && <p className="text-red-500 text-xs mt-1">{errors.tipo_viaje.message}</p>}
             </div>
             <div>
               <label className="label">Fecha de salida *</label>
