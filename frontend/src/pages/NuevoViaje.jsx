@@ -50,7 +50,9 @@ export default function NuevoViaje() {
 
   const placaBusqueda = watch('placa_busqueda')
   const vehiculoId    = watch('vehiculo_id')
-  const km            = watch('km_recorridos')
+  const kmInicial     = watch('km_inicial')
+  const kmFinal       = watch('km_final')
+  const km            = Math.max(0, parseFloat(kmFinal || 0) - parseFloat(kmInicial || 0))
 
   useEffect(() => {
     const cargarCatalogos = async () => {
@@ -80,7 +82,6 @@ export default function NuevoViaje() {
       if (encontrados.length === 1) {
         setValue('vehiculo_id', encontrados[0].id)
         toast.success(`Vehículo encontrado: ${encontrados[0].placa} — ${encontrados[0].marca} ${encontrados[0].modelo}`)
-        // Cargar costo/km del mes
         const costoRes = await vehiculosAPI.costoKm(encontrados[0].id)
         setCostoKm(costoRes.data.datos)
       } else if (encontrados.length === 0) {
@@ -103,7 +104,7 @@ export default function NuevoViaje() {
   }, [vehiculoId])
 
   const totalGastos    = gastos.reduce((s, g) => s + parseFloat(g.valor || 0), 0)
-  const costoOperacion = costoKm ? (parseFloat(km || 0) * parseFloat(costoKm.costo_por_km || 0)) : 0
+  const costoOperacion = costoKm ? (km * parseFloat(costoKm.costo_por_km || 0)) : 0
   const flete          = parseFloat(watch('valor_flete_cobrado') || 0)
   const utilidadEstim  = flete - totalGastos - costoOperacion
 
@@ -120,7 +121,6 @@ export default function NuevoViaje() {
     if (!data.vehiculo_id) { toast.error('Selecciona un vehículo'); return }
     setCargando(true)
     try {
-      // Crear el viaje
       const viajeRes = await viajesAPI.crear({
         vehiculo_id:        parseInt(data.vehiculo_id),
         conductor_id:       parseInt(data.conductor_id),
@@ -128,10 +128,10 @@ export default function NuevoViaje() {
         origen:             data.origen,
         destino:            data.destino,
         fecha_salida:       data.fecha_salida,
-        hora_salida:        data.hora_salida,
         fecha_llegada:      data.fecha_llegada || null,
-        hora_llegada:       data.hora_llegada  || null,
-        km_recorridos:      parseFloat(data.km_recorridos || 0),
+        km_inicial:         parseFloat(data.km_inicial || 0),
+        km_final:           parseFloat(data.km_final || 0),
+        km_recorridos:      km,
         numero_manifiesto:  data.numero_manifiesto || null,
         fecha_manifiesto:   data.fecha_manifiesto  || null,
         tipo_carga:         data.tipo_carga         || null,
@@ -144,7 +144,6 @@ export default function NuevoViaje() {
 
       const viajeId = viajeRes.data.datos.id
 
-      // Agregar gastos
       for (const g of gastos) {
         await viajesAPI.agregarGasto(viajeId, {
           categoria:   g.categoria,
@@ -186,7 +185,6 @@ export default function NuevoViaje() {
             Vehículo
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Búsqueda por placa */}
             <div className="md:col-span-1">
               <label className="label">Buscar por placa</label>
               <div className="flex gap-2">
@@ -239,12 +237,18 @@ export default function NuevoViaje() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Origen *</label>
-              <select {...register('origen', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select {...register('origen', { required: 'Campo requerido' })} className="input">
+                <option value="">— Seleccionar —</option>
+                {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
               {errors.origen && <p className="text-red-500 text-xs mt-1">{errors.origen.message}</p>}
             </div>
             <div>
               <label className="label">Destino *</label>
-              <select {...register('destino', { required: 'Campo requerido' })} className="input"><option value="">— Seleccionar —</option>{CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select {...register('destino', { required: 'Campo requerido' })} className="input">
+                <option value="">— Seleccionar —</option>
+                {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
               {errors.destino && <p className="text-red-500 text-xs mt-1">{errors.destino.message}</p>}
             </div>
             <div>
@@ -253,23 +257,24 @@ export default function NuevoViaje() {
               {errors.fecha_salida && <p className="text-red-500 text-xs mt-1">{errors.fecha_salida.message}</p>}
             </div>
             <div>
-              <label className="label">Hora de salida *</label>
-              <input type="time" {...register('hora_salida', { required: 'Campo requerido' })} className="input" />
-              {errors.hora_salida && <p className="text-red-500 text-xs mt-1">{errors.hora_salida.message}</p>}
-            </div>
-            <div>
               <label className="label">Fecha de llegada</label>
               <input type="date" {...register('fecha_llegada')} className="input" />
             </div>
             <div>
-              <label className="label">Hora de llegada</label>
-              <input type="time" {...register('hora_llegada')} className="input" />
+              <label className="label">Km inicial (odómetro salida)</label>
+              <input type="number" step="1" {...register('km_inicial')} placeholder="150000" className="input" />
             </div>
             <div>
+              <label className="label">Km final (odómetro llegada)</label>
+              <input type="number" step="1" {...register('km_final')} placeholder="150900" className="input" />
+            </div>
+            <div className="md:col-span-2">
               <label className="label">Kilómetros recorridos</label>
-              <input type="number" step="0.1" {...register('km_recorridos')} placeholder="900" className="input" />
+              <div className="input bg-gray-50 text-gray-700 font-semibold">
+                {km > 0 ? `${km.toFixed(0)} km` : '— (completa Km inicial y Km final)'}
+              </div>
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="label">Cliente (dueño de la carga) *</label>
               <select {...register('cliente_id', { required: 'Selecciona un cliente' })} className="input">
                 <option value="">— Seleccionar —</option>
@@ -327,7 +332,6 @@ export default function NuevoViaje() {
             Gastos del viaje
           </h2>
 
-          {/* Formulario agregar gasto */}
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
               <div>
@@ -359,7 +363,6 @@ export default function NuevoViaje() {
             </div>
           </div>
 
-          {/* Lista de gastos */}
           {gastos.length > 0 ? (
             <div className="space-y-2">
               {gastos.map((g) => (
