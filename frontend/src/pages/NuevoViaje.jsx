@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Search, Plus, Trash2 } from 'lucide-react'
@@ -7,20 +7,19 @@ import { viajesAPI, vehiculosAPI, conductoresAPI, clientesAPI } from '../service
 import { formatCOP } from '../utils/format'
 
 const CATEGORIAS_GASTO = [
-  { value: 'combustible',          label: 'Combustible (ACPM)' },
-  { value: 'peajes',               label: 'Peajes' },
-  { value: 'viaticos',             label: 'Viáticos conductor' },
-  { value: 'parqueadero',          label: 'Parqueadero' },
-  { value: 'lavado',               label: 'Lavado vehículo' },
-  { value: 'adblue',               label: 'AdBlue' },
-  { value: 'comision_carga',       label: 'Comisión por carga' },
-  { value: 'descuento_manifiesto', label: 'Descuento manifiesto' },
-  { value: 'cargue',               label: 'Cargue' },
-  { value: 'descargue',            label: 'Descargue' },
-  { value: 'retiro_bancario',      label: 'Retiro bancario' },
-  { value: 'bascula',              label: 'Báscula' },
-  { value: 'sobrepeso',            label: 'Sobrepeso' },
-  { value: 'otro',                 label: 'Otro gasto' },
+  { value: 'combustible',    label: 'Combustible (ACPM)' },
+  { value: 'peajes',         label: 'Peajes' },
+  { value: 'viaticos',       label: 'Viáticos conductor' },
+  { value: 'parqueadero',    label: 'Parqueadero' },
+  { value: 'lavado',         label: 'Lavado vehículo' },
+  { value: 'adblue',         label: 'AdBlue' },
+  { value: 'comision_carga', label: 'Comisión por carga' },
+  { value: 'cargue',         label: 'Cargue' },
+  { value: 'descargue',      label: 'Descargue' },
+  { value: 'retiro_bancario',label: 'Retiro bancario' },
+  { value: 'bascula',        label: 'Báscula' },
+  { value: 'sobrepeso',      label: 'Sobrepeso' },
+  { value: 'otro',           label: 'Otro gasto' },
 ]
 
 
@@ -139,6 +138,8 @@ export default function NuevoViaje() {
         peso_carga_kg:      parseFloat(data.peso_carga_kg || 0) || null,
         valor_manifiesto:   parseFloat(data.valor_manifiesto || 0),
         valor_flete_cobrado:parseFloat(data.valor_flete_cobrado || 0),
+        anticipo:           parseFloat(data.anticipo || 0),
+        retenciones:        parseFloat(data.retenciones || 0),
         otros_ingresos:     parseFloat(data.otros_ingresos || 0),
         observaciones:      data.observaciones || null,
       })
@@ -336,6 +337,23 @@ export default function NuevoViaje() {
               <input type="number" {...register('valor_flete_cobrado', { required: 'Campo requerido' })}
                 placeholder="2500000" className="input" />
               {errors.valor_flete_cobrado && <p className="text-red-500 text-xs mt-1">{errors.valor_flete_cobrado.message}</p>}
+            </div>
+            <div>
+              <label className="label">Anticipo</label>
+              <input type="number" {...register('anticipo')} placeholder="0" className="input" />
+            </div>
+            <div>
+              <label className="label">Retenciones</label>
+              <input type="number" {...register('retenciones')} placeholder="0" className="input" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Saldo (Flete − Anticipo)</label>
+              <div className="input bg-gray-50 font-semibold text-gray-700">
+                {(() => {
+                  const saldo = parseFloat(watch('valor_flete_cobrado') || 0) - parseFloat(watch('anticipo') || 0)
+                  return saldo !== 0 ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(saldo) : '—'
+                })()}
+              </div>
             </div>
           </div>
         </div>
