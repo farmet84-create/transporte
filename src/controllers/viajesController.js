@@ -293,7 +293,7 @@ async function cambiarEstado(req, res, next) {
     );
 
     if (estado === 'completado') {
-      const [viajeData] = await pool.query(`SELECT fecha_salida FROM viajes WHERE id = ?`, [id]);
+      const [viajeData] = await pool.query(`SELECT DATE_FORMAT(fecha_salida, '%Y-%m-%d') AS fecha_salida FROM viajes WHERE id = ?`, [id]);
       const { anio, mes } = anioMesDeFecha(viajeData[0].fecha_salida)
       await pool.query(
         `UPDATE costos_administrativos_mensual
