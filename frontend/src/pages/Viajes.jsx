@@ -5,7 +5,7 @@ import { viajesAPI } from '../services/api'
 import { formatCOP, formatPct, formatFecha, colorRentabilidad, badgeEstado, labelEstado } from '../utils/format'
 import toast from 'react-hot-toast'
 
-const ESTADOS = ['','programado','en_curso','completado','cancelado','liquidado']
+const ESTADOS = ['','programado','en_curso','completado','radicado','pendiente_pago','cancelado','liquidado']
 
 function useEsMobil() {
   const [esMobil, setEsMobil] = useState(() => window.innerWidth < 900)
