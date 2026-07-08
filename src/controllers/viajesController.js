@@ -124,7 +124,7 @@ async function crear(req, res, next) {
       origen, destino, tipo_viaje, fecha_salida, fecha_llegada,
       km_recorridos, km_inicial, km_final,
       numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-      valor_manifiesto, anticipo, descuento_manifiesto,
+      valor_manifiesto, anticipo, retenciones, descuento_manifiesto,
       valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
@@ -153,11 +153,11 @@ async function crear(req, res, next) {
           vehiculo_id, conductor_id, cliente_id, ruta_id,
           origen, destino, tipo_viaje, fecha_salida, fecha_llegada,
           km_recorridos, numero_manifiesto, fecha_manifiesto, tipo_carga, peso_carga_kg,
-          valor_manifiesto, anticipo, descuento_manifiesto,
+          valor_manifiesto, anticipo, retenciones, descuento_manifiesto,
           valor_flete_cobrado, otros_ingresos,
           total_gastos_directos, costo_km_aplicado, total_costo_operacion_km,
           costo_admin_aplicado, estado, creado_por
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)`,
       [
         uuid, empresaId, numeroViaje,
         vehiculo_id, conductor_id, cliente_id, ruta_id || null,
@@ -170,6 +170,7 @@ async function crear(req, res, next) {
         tipo_carga || null, peso_carga_kg || null,
         parseFloat(valor_manifiesto || 0),
         parseFloat(anticipo || 0),
+        parseFloat(retenciones || 0),
         parseFloat(descuento_manifiesto || 0),
         parseFloat(valor_flete_cobrado || 0),
         parseFloat(otros_ingresos || 0),
