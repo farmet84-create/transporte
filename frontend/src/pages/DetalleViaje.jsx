@@ -1,11 +1,11 @@
- import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, TrendingUp, TrendingDown, Truck, User, Building2, MapPin, Plus, Trash2, Edit2, Save, X, Fuel } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { viajesAPI } from '../services/api'
 import { formatCOP, formatFecha, formatHora, formatNum, badgeEstado, labelEstado } from '../utils/format'
 
-const ESTADOS = ['programado','en_curso','completado','cancelado','liquidado']
+const ESTADOS = ['programado','en_curso','completado','radicado','pendiente_pago','cancelado','liquidado']
 
 const CATEGORIAS_GASTO = [
   { value: 'combustible',    label: 'Combustible (ACPM)' },
