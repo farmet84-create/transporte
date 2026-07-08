@@ -277,7 +277,7 @@ async function cambiarEstado(req, res, next) {
     const { estado } = req.body;
     const empresaId = req.usuario.empresa_id;
 
-    const estadosValidos = ['programado','en_curso','completado','cancelado','liquidado'];
+    const estadosValidos = ['programado','en_curso','completado','cancelado','liquidado','radicado','pendiente_pago'];
     if (!estadosValidos.includes(estado))
       return error(res, `Estado inválido`, 400);
 
