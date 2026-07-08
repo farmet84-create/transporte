@@ -55,22 +55,26 @@ export const badgeRentabilidad = (pct) => {
 // Badge de estado de viaje
 export const badgeEstado = (estado) => {
   const map = {
-    programado:  'badge-blue',
-    en_curso:    'badge-yellow',
-    completado:  'badge-green',
-    cancelado:   'badge-red',
-    liquidado:   'badge-gray',
+    programado:      'badge-blue',
+    en_curso:        'badge-yellow',
+    completado:      'badge-green',
+    radicado:        'badge-purple',
+    pendiente_pago:  'badge-orange',
+    cancelado:       'badge-red',
+    liquidado:       'badge-gray',
   }
   return map[estado] || 'badge-gray'
 }
 
 export const labelEstado = (estado) => {
   const map = {
-    programado: 'Programado',
-    en_curso:   'En curso',
-    completado: 'Completado',
-    cancelado:  'Cancelado',
-    liquidado:  'Liquidado',
+    programado:     'Programado',
+    en_curso:       'En curso',
+    completado:     'Completado',
+    radicado:       'Radicado',
+    pendiente_pago: 'Pendiente de pago',
+    cancelado:      'Cancelado',
+    liquidado:      'Liquidado',
   }
   return map[estado] || estado
 }
