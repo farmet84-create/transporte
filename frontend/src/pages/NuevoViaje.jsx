@@ -45,6 +45,8 @@ export default function NuevoViaje() {
   const [costoKm, setCostoKm]       = useState(null)
   const [gastos, setGastos]         = useState([])
   const [nuevoGasto, setNuevoGasto] = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  const [gastosPreop, setGastosPreop]         = useState([])
+  const [nuevoGastoPreop, setNuevoGastoPreop] = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
   const [buscandoPlaca, setBuscandoPlaca] = useState(false)
 
   const placaBusqueda = watch('placa_busqueda')
@@ -116,6 +118,17 @@ export default function NuevoViaje() {
     setNuevoGasto({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
   }
 
+  const totalGastosPreop = gastosPreop.reduce((s, g) => s + parseFloat(g.valor || 0), 0)
+
+  const agregarGastoPreop = () => {
+    if (!nuevoGastoPreop.valor || parseFloat(nuevoGastoPreop.valor) <= 0) {
+      toast.error('Ingresa un valor válido para el gasto')
+      return
+    }
+    setGastosPreop(g => [...g, { ...nuevoGastoPreop, id: Date.now() }])
+    setNuevoGastoPreop({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  }
+
   const onSubmit = async (data) => {
     if (!data.vehiculo_id) { toast.error('Selecciona un vehículo'); return }
     setCargando(true)
@@ -148,6 +161,16 @@ export default function NuevoViaje() {
 
       for (const g of gastos) {
         await viajesAPI.agregarGasto(viajeId, {
+          categoria:   g.categoria,
+          descripcion: g.descripcion || null,
+          valor:       parseFloat(g.valor),
+          cantidad:    parseFloat(g.cantidad || 1),
+          fecha:       data.fecha_salida,
+        })
+      }
+
+      for (const g of gastosPreop) {
+        await viajesAPI.agregarGastoPreop(viajeId, {
           categoria:   g.categoria,
           descripcion: g.descripcion || null,
           valor:       parseFloat(g.valor),
@@ -425,6 +448,74 @@ export default function NuevoViaje() {
               <div className="flex justify-end pt-2 border-t">
                 <span className="text-sm text-gray-500 mr-3">Total gastos directos:</span>
                 <span className="font-bold text-gray-900">{formatCOP(totalGastos)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm text-center py-4">No hay gastos agregados aún</p>
+          )}
+        </div>
+
+        {/* GASTOS PRE OPERACIONALES — informativo, no afecta rentabilidad */}
+        <div className="card p-5">
+          <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <span className="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">5</span>
+            Gastos pre operacionales
+          </h2>
+          <p className="text-xs text-gray-400 mb-4 ml-8">Solo informativo — no afecta los costos ni la rentabilidad del viaje</p>
+
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="label">Categoría</label>
+                <select value={nuevoGastoPreop.categoria}
+                  onChange={e => setNuevoGastoPreop(g => ({ ...g, categoria: e.target.value }))}
+                  className="input">
+                  {CATEGORIAS_GASTO.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Descripción</label>
+                <input value={nuevoGastoPreop.descripcion}
+                  onChange={e => setNuevoGastoPreop(g => ({ ...g, descripcion: e.target.value }))}
+                  placeholder="Opcional" className="input" />
+              </div>
+              <div>
+                <label className="label">Valor ($)</label>
+                <input type="number" value={nuevoGastoPreop.valor}
+                  onChange={e => setNuevoGastoPreop(g => ({ ...g, valor: e.target.value }))}
+                  placeholder="150000" className="input" />
+              </div>
+              <button type="button" onClick={agregarGastoPreop}
+                className="btn-primary flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" /> Agregar
+              </button>
+            </div>
+          </div>
+
+          {gastosPreop.length > 0 ? (
+            <div className="space-y-2">
+              {gastosPreop.map((g) => (
+                <div key={g.id} className="flex items-center justify-between bg-white border rounded-lg px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className="badge-blue">
+                      {CATEGORIAS_GASTO.find(c => c.value === g.categoria)?.label || g.categoria}
+                    </span>
+                    {g.descripcion && <span className="text-gray-500 text-xs">{g.descripcion}</span>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-gray-900">{formatCOP(g.valor)}</span>
+                    <button type="button" onClick={() => setGastosPreop(gs => gs.filter(x => x.id !== g.id))}
+                      className="text-red-400 hover:text-red-600 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-end pt-2 border-t">
+                <span className="text-sm text-gray-500 mr-3">Total gastos pre operacionales:</span>
+                <span className="font-bold text-gray-900">{formatCOP(totalGastosPreop)}</span>
               </div>
             </div>
           ) : (
