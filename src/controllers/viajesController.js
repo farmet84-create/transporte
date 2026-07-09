@@ -208,7 +208,7 @@ async function actualizar(req, res, next) {
       cliente_id, origen, destino, fecha_salida,
       fecha_llegada, km_recorridos, km_inicial, km_final,
       numero_manifiesto, fecha_manifiesto, tipo_carga,
-      peso_carga_kg, valor_manifiesto, anticipo, descuento_manifiesto,
+      peso_carga_kg, valor_manifiesto, anticipo, retenciones, descuento_manifiesto,
       valor_flete_cobrado, otros_ingresos, observaciones
     } = req.body;
 
@@ -230,6 +230,7 @@ async function actualizar(req, res, next) {
         tipo_carga = ?, peso_carga_kg = ?,
         valor_manifiesto = ?,
         anticipo = ?,
+        retenciones = ?,
         descuento_manifiesto = ?,
         valor_flete_cobrado = ?,
         otros_ingresos = ?,
@@ -249,6 +250,7 @@ async function actualizar(req, res, next) {
         parseFloat(peso_carga_kg        || 0) || null,
         parseFloat(valor_manifiesto     || 0),
         parseFloat(anticipo             || 0),
+        parseFloat(retenciones          || 0),
         parseFloat(descuento_manifiesto || 0),
         parseFloat(valor_flete_cobrado  || 0),
         parseFloat(otros_ingresos       || 0),
