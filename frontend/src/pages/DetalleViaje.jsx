@@ -131,6 +131,7 @@ export default function DetalleViaje() {
         peso_carga_kg:        formViaje.peso_carga_kg,
         valor_manifiesto:     parseFloat(formViaje.valor_manifiesto || 0),
         anticipo:             parseFloat(formViaje.anticipo || 0),
+        retenciones:          parseFloat(formViaje.retenciones || 0),
         descuento_manifiesto: parseFloat(formViaje.descuento_manifiesto || 0),
         valor_flete_cobrado:  parseFloat(formViaje.valor_flete_cobrado || 0),
         otros_ingresos:       parseFloat(formViaje.otros_ingresos || 0),
