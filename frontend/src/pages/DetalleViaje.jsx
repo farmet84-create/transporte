@@ -311,17 +311,13 @@ export default function DetalleViaje() {
                 </div>
                 <div>
                   <label className="label">Origen</label>
-                  <select value={formViaje.origen} onChange={e => setF('origen', e.target.value)} className="input">
-                    <option value="">— Seleccionar —</option>
-                    {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <input value={formViaje.origen || ''} onChange={e => setF('origen', e.target.value)}
+                    placeholder="Ej: Bogotá" className="input" />
                 </div>
                 <div>
                   <label className="label">Destino</label>
-                  <select value={formViaje.destino} onChange={e => setF('destino', e.target.value)} className="input">
-                    <option value="">— Seleccionar —</option>
-                    {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <input value={formViaje.destino || ''} onChange={e => setF('destino', e.target.value)}
+                    placeholder="Ej: Medellín" className="input" />
                 </div>
                 <div>
                   <label className="label">Fecha salida</label>
