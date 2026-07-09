@@ -71,6 +71,8 @@ export const viajesAPI = {
   eliminar:           (id)          => api.delete(`/viajes/${id}`),
   agregarGasto:       (id, data)    => api.post(`/viajes/${id}/gastos`, data),
   eliminarGasto:      (id, gastoId) => api.delete(`/viajes/${id}/gastos/${gastoId}`),
+  agregarGastoPreop:  (id, data)    => api.post(`/viajes/${id}/gastos-preop`, data),
+  eliminarGastoPreop: (id, gastoId) => api.delete(`/viajes/${id}/gastos-preop/${gastoId}`),
   agregarCombustible: (id, data)    => api.post(`/viajes/${id}/combustible`, data),
   eliminarCombustible:(id, cId)     => api.delete(`/viajes/${id}/combustible/${cId}`),
 }
@@ -91,9 +93,9 @@ export const reportesAPI = {
 }
 
 export const suscripcionAPI = {
-  obtenerEstado:  () => api.get('/suscripcion'),
-  generarPago:    () => api.post('/suscripcion/generar-pago'),
-  listarPagos:    () => api.get('/suscripcion/pagos'),
+  obtenerEstado:  ()  => api.get('/suscripcion'),
+  generarPago:    ()  => api.post('/suscripcion/generar-pago'),
+  listarPagos:    ()  => api.get('/suscripcion/pagos'),
 }
 
 export default api
