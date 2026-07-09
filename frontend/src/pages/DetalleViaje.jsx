@@ -73,6 +73,9 @@ export default function DetalleViaje() {
   const [nuevoGasto, setNuevoGasto]         = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
   const [agregandoGasto, setAgregandoGasto] = useState(false)
 
+  const [nuevoGastoPreop, setNuevoGastoPreop]         = useState({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+  const [agregandoGastoPreop, setAgregandoGastoPreop] = useState(false)
+
   const COMB_INICIAL = { nombre_estacion: '', km_inicial: '', km_final: '', valor_galon: '', fecha: new Date().toISOString().substring(0,10), observaciones: '' }
   const [nuevoComb, setNuevoComb]         = useState(COMB_INICIAL)
   const [agregandoComb, setAgregandoComb] = useState(false)
@@ -164,6 +167,29 @@ export default function DetalleViaje() {
       cargar()
     } catch { toast.error('Error al eliminar') }
   }
+
+  const agregarGastoPreop = async () => {
+    if (!nuevoGastoPreop.valor || parseFloat(nuevoGastoPreop.valor) <= 0) { toast.error('Ingresa un valor válido'); return }
+    setAgregandoGastoPreop(true)
+    try {
+      await viajesAPI.agregarGastoPreop(id, { ...nuevoGastoPreop, valor: parseFloat(nuevoGastoPreop.valor), fecha: soloFecha(viaje.fecha_salida) })
+      toast.success('Gasto pre operacional agregado')
+      setNuevoGastoPreop({ categoria: 'combustible', descripcion: '', valor: '', cantidad: 1 })
+      cargar()
+    } catch { toast.error('Error al agregar gasto') }
+    finally { setAgregandoGastoPreop(false) }
+  }
+
+  const eliminarGastoPreop = async (gastoId) => {
+    if (!confirm('¿Eliminar este gasto pre operacional?')) return
+    try {
+      await viajesAPI.eliminarGastoPreop(id, gastoId)
+      toast.success('Gasto eliminado')
+      cargar()
+    } catch { toast.error('Error al eliminar') }
+  }
+
+  const totalGastosPreop = (viaje?.gastos_preop || []).reduce((s, g) => s + parseFloat(g.valor || 0), 0)
 
   const agregarCombustible = async () => {
     if (!nuevoComb.nombre_estacion) { toast.error('Ingresa el nombre de la estación'); return }
@@ -474,6 +500,67 @@ export default function DetalleViaje() {
                 <div className="flex justify-between pt-2 border-t font-bold text-sm">
                   <span>Total gastos directos</span>
                   <span className="text-red-600">{formatCOP(viaje.total_gastos_directos)}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm text-center py-4">No hay gastos registrados</p>
+            )}
+          </div>
+
+          {/* GASTOS PRE OPERACIONALES — informativo, no afecta rentabilidad */}
+          <div className="card p-5">
+            <h3 className="font-semibold text-gray-900 mb-1">Gastos pre operacionales</h3>
+            <p className="text-xs text-gray-400 mb-4">Solo informativo — no afecta los costos ni la rentabilidad del viaje</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-3">Agregar gasto</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div>
+                  <label className="label">Categoría</label>
+                  <select value={nuevoGastoPreop.categoria}
+                    onChange={e => setNuevoGastoPreop(g => ({ ...g, categoria: e.target.value }))}
+                    className="input">
+                    {CATEGORIAS_GASTO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Descripción</label>
+                  <input value={nuevoGastoPreop.descripcion}
+                    onChange={e => setNuevoGastoPreop(g => ({ ...g, descripcion: e.target.value }))}
+                    placeholder="Opcional" className="input" />
+                </div>
+                <div>
+                  <label className="label">Valor ($)</label>
+                  <input type="number" value={nuevoGastoPreop.valor}
+                    onChange={e => setNuevoGastoPreop(g => ({ ...g, valor: e.target.value }))}
+                    placeholder="0" className="input" />
+                </div>
+                <button onClick={agregarGastoPreop} disabled={agregandoGastoPreop}
+                  className="btn-primary flex items-center gap-2 text-sm">
+                  <Plus className="w-4 h-4" />
+                  {agregandoGastoPreop ? 'Agregando...' : 'Agregar'}
+                </button>
+              </div>
+            </div>
+
+            {viaje.gastos_preop?.length > 0 ? (
+              <div className="space-y-2">
+                {viaje.gastos_preop.map(g => (
+                  <div key={g.id} className="flex items-center justify-between bg-white border rounded-lg px-4 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className="badge-blue capitalize">{g.categoria.replace(/_/g,' ')}</span>
+                      {g.descripcion && <span className="text-gray-500 text-xs">{g.descripcion}</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-900">{formatCOP(g.valor)}</span>
+                      <button onClick={() => eliminarGastoPreop(g.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-2 border-t font-bold text-sm">
+                  <span>Total gastos pre operacionales</span>
+                  <span className="text-gray-900">{formatCOP(totalGastosPreop)}</span>
                 </div>
               </div>
             ) : (
