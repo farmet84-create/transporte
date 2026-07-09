@@ -1,4 +1,4 @@
-'use strict';
+ 'use strict';
 
 const { pool } = require('../config/database');
 const {
@@ -6,20 +6,17 @@ const {
   registrarAuditoria, generarNumeroViaje
 } = require('../utils/helpers');
 
-// Extrae año/mes de una fecha string sin conversión de zona horaria
 const anioMesDeFecha = (fechaStr) => {
   const s = (fechaStr || '').toString().substring(0, 10)
   const [anio, mes] = s.split('-').map(Number)
   return { anio, mes }
 }
 
-// Limpia fecha a YYYY-MM-DD sin importar si viene con hora ISO
 const limpiarFecha = (f) => {
   if (!f) return null
   return f.toString().substring(0, 10)
 }
 
-// GET /api/viajes
 async function listar(req, res, next) {
   try {
     const empresaId = req.usuario.empresa_id;
@@ -65,7 +62,6 @@ async function listar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// GET /api/viajes/:id
 async function obtener(req, res, next) {
   try {
     const [rows] = await pool.query(
@@ -115,7 +111,6 @@ async function obtener(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// POST /api/viajes
 async function crear(req, res, next) {
   try {
     const empresaId = req.usuario.empresa_id;
@@ -192,7 +187,6 @@ async function crear(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// PUT /api/viajes/:id
 async function actualizar(req, res, next) {
   try {
     const { id } = req.params;
@@ -214,8 +208,8 @@ async function actualizar(req, res, next) {
 
     const kmNum = parseFloat(km_recorridos) || Math.max(0, parseFloat(km_final || 0) - parseFloat(km_inicial || 0)) || parseFloat(antes[0].km_recorridos);
 
-    const fechaSalidaLimpia    = limpiarFecha(fecha_salida)    || limpiarFecha(antes[0].fecha_salida)
-    const fechaLlegadaLimpia   = limpiarFecha(fecha_llegada)   || null
+    const fechaSalidaLimpia     = limpiarFecha(fecha_salida)     || limpiarFecha(antes[0].fecha_salida)
+    const fechaLlegadaLimpia    = limpiarFecha(fecha_llegada)    || null
     const fechaManifiestoLimpia = limpiarFecha(fecha_manifiesto) || null
 
     await pool.query(
@@ -232,6 +226,7 @@ async function actualizar(req, res, next) {
         anticipo = ?,
         retenciones = ?,
         descuento_manifiesto = ?,
+        saldo_manifiesto = ? - ? - ? - ?,
         valor_flete_cobrado = ?,
         otros_ingresos = ?,
         observaciones = ?,
@@ -252,6 +247,10 @@ async function actualizar(req, res, next) {
         parseFloat(anticipo             || 0),
         parseFloat(retenciones          || 0),
         parseFloat(descuento_manifiesto || 0),
+        parseFloat(valor_manifiesto     || 0),
+        parseFloat(retenciones          || 0),
+        parseFloat(descuento_manifiesto || 0),
+        parseFloat(anticipo             || 0),
         parseFloat(valor_flete_cobrado  || 0),
         parseFloat(otros_ingresos       || 0),
         observaciones || null,
@@ -273,7 +272,6 @@ async function actualizar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// PUT /api/viajes/:id/estado
 async function cambiarEstado(req, res, next) {
   try {
     const { id } = req.params;
@@ -314,7 +312,6 @@ async function cambiarEstado(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// POST /api/viajes/:id/gastos
 async function agregarGasto(req, res, next) {
   try {
     const viajeId   = req.params.id;
@@ -343,7 +340,6 @@ async function agregarGasto(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// DELETE /api/viajes/:id/gastos/:gastoId
 async function eliminarGasto(req, res, next) {
   try {
     const { id: viajeId, gastoId } = req.params;
@@ -356,7 +352,6 @@ async function eliminarGasto(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// POST /api/viajes/:id/combustible
 async function agregarCombustible(req, res, next) {
   try {
     const viajeId   = req.params.id;
@@ -395,7 +390,6 @@ async function agregarCombustible(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// DELETE /api/viajes/:id/combustible/:cId
 async function eliminarCombustible(req, res, next) {
   try {
     const { id: viajeId, cId } = req.params;
@@ -407,7 +401,6 @@ async function eliminarCombustible(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// DELETE /api/viajes/:id
 async function eliminarViaje(req, res, next) {
   try {
     const { id } = req.params;
@@ -437,7 +430,6 @@ async function recalcularGastosDirectos(viajeId) {
   );
 }
 
-// GET /api/viajes/:id/rentabilidad
 async function rentabilidad(req, res, next) {
   try {
     const [rows] = await pool.query(
