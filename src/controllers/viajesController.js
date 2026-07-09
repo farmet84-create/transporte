@@ -1,4 +1,4 @@
- 'use strict';
+'use strict';
 
 const { pool } = require('../config/database');
 const {
@@ -226,7 +226,6 @@ async function actualizar(req, res, next) {
         anticipo = ?,
         retenciones = ?,
         descuento_manifiesto = ?,
-        saldo_manifiesto = ? - ? - ? - ?,
         valor_flete_cobrado = ?,
         otros_ingresos = ?,
         observaciones = ?,
@@ -247,10 +246,6 @@ async function actualizar(req, res, next) {
         parseFloat(anticipo             || 0),
         parseFloat(retenciones          || 0),
         parseFloat(descuento_manifiesto || 0),
-        parseFloat(valor_manifiesto     || 0),
-        parseFloat(retenciones          || 0),
-        parseFloat(descuento_manifiesto || 0),
-        parseFloat(anticipo             || 0),
         parseFloat(valor_flete_cobrado  || 0),
         parseFloat(otros_ingresos       || 0),
         observaciones || null,
