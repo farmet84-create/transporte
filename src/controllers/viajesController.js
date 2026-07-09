@@ -111,7 +111,19 @@ async function obtener(req, res, next) {
       [req.usuario.empresa_id]
     );
 
-    return ok(res, { ...rows[0], gastos, combustible, clientes });
+    let gastos_preop = [];
+    try {
+      const [preop] = await pool.query(
+        `SELECT id, categoria, descripcion, valor, cantidad, unidad, proveedor, fecha
+         FROM gastos_preoperacionales
+         WHERE viaje_id = ? AND eliminado_en IS NULL
+         ORDER BY categoria, fecha`,
+        [req.params.id]
+      );
+      gastos_preop = preop;
+    } catch (e) { /* tabla aún no creada */ }
+
+    return ok(res, { ...rows[0], gastos, combustible, clientes, gastos_preop });
   } catch (err) { next(err); }
 }
 
@@ -356,6 +368,46 @@ async function eliminarGasto(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// POST /api/viajes/:id/gastos-preop — informativo, NO afecta costos ni rentabilidad
+async function agregarGastoPreop(req, res, next) {
+  try {
+    const viajeId   = req.params.id;
+    const empresaId = req.usuario.empresa_id;
+    const { categoria, descripcion, valor, cantidad, unidad, proveedor, fecha } = req.body;
+
+    const [viaje] = await pool.query(
+      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
+      [viajeId, empresaId]
+    );
+    if (!viaje.length) return error(res, 'Viaje no encontrado', 404);
+
+    const uuid = nuevoUuid();
+    const [result] = await pool.query(
+      `INSERT INTO gastos_preoperacionales
+        (uuid, empresa_id, viaje_id, categoria, descripcion, valor, cantidad, unidad, proveedor, fecha, creado_por)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [uuid, empresaId, viajeId, categoria, descripcion || null,
+       parseFloat(valor), parseFloat(cantidad || 1), unidad || null,
+       proveedor || null, limpiarFecha(fecha), req.usuario.id]
+    );
+
+    const [nuevo] = await pool.query(`SELECT * FROM gastos_preoperacionales WHERE id = ?`, [result.insertId]);
+    return ok(res, nuevo[0], 'Gasto pre operacional registrado', 201);
+  } catch (err) { next(err); }
+}
+
+// DELETE /api/viajes/:id/gastos-preop/:gastoId
+async function eliminarGastoPreop(req, res, next) {
+  try {
+    const { id: viajeId, gastoId } = req.params;
+    await pool.query(
+      `UPDATE gastos_preoperacionales SET eliminado_en = NOW() WHERE id = ? AND viaje_id = ?`,
+      [gastoId, viajeId]
+    );
+    return ok(res, null, 'Gasto pre operacional eliminado');
+  } catch (err) { next(err); }
+}
+
 // POST /api/viajes/:id/combustible
 async function agregarCombustible(req, res, next) {
   try {
@@ -467,6 +519,7 @@ async function rentabilidad(req, res, next) {
 module.exports = {
   listar, obtener, crear, actualizar, cambiarEstado,
   agregarGasto, eliminarGasto,
+  agregarGastoPreop, eliminarGastoPreop,
   agregarCombustible, eliminarCombustible,
   rentabilidad, eliminarViaje
 };
