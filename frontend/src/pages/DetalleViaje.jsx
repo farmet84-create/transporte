@@ -95,9 +95,10 @@ export default function DetalleViaje() {
 
   useEffect(() => { cargar() }, [id])
 
+  // Total costos = solo gastos directos del viaje
   const flete         = parseFloat(viaje?.valor_flete_cobrado || 0)
-  const utilidadBruta = parseFloat(viaje?.utilidad_bruta || 0)
-  const totalCostos   = parseFloat(viaje?.total_costos || 0)
+  const totalCostos   = parseFloat(viaje?.total_gastos_directos || 0)
+  const utilidadBruta = flete - totalCostos
   const margen        = flete > 0 ? (utilidadBruta / flete) * 100 : 0
   const rentabilidad  = totalCostos > 0 ? (utilidadBruta / totalCostos) * 100 : 0
   const colorPct = v => v >= 20 ? 'text-green-600' : v >= 10 ? 'text-yellow-600' : v >= 0 ? 'text-orange-500' : 'text-red-600'
@@ -586,8 +587,8 @@ export default function DetalleViaje() {
               <FilaCosto label="Total gastos viaje" valor={viaje.total_gastos_directos} color="red" />
             </div>
             <div className="pt-3 border-t-2 border-gray-200 space-y-2">
-              <FilaCosto label="Total costos" valor={viaje.total_costos} color="red" />
-              <FilaCosto label="Utilidad bruta" valor={viaje.utilidad_bruta} color={viaje.utilidad_bruta >= 0 ? 'green' : 'red'} />
+              <FilaCosto label="Total costos" valor={totalCostos} color="red" />
+              <FilaCosto label="Utilidad bruta" valor={utilidadBruta} color={utilidadBruta >= 0 ? 'green' : 'red'} />
             </div>
             <div className="mt-4 pt-3 border-t-2 border-gray-300 space-y-3">
               <div className="flex justify-between items-center">
