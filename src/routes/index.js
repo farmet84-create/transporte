@@ -207,6 +207,8 @@ router.put   ('/viajes/:id',                   autenticar, autorizar('admin','op
 router.put   ('/viajes/:id/estado',            autenticar, autorizar('admin','operador'), viajes.cambiarEstado);
 router.post  ('/viajes/:id/gastos',            autenticar, autorizar('admin','operador'), viajes.agregarGasto);
 router.delete('/viajes/:id/gastos/:gastoId',   autenticar, autorizar('admin','operador'), viajes.eliminarGasto);
+router.post  ('/viajes/:id/gastos-preop',            autenticar, autorizar('admin','operador'), viajes.agregarGastoPreop);
+router.delete('/viajes/:id/gastos-preop/:gastoId',   autenticar, autorizar('admin','operador'), viajes.eliminarGastoPreop);
 router.post  ('/viajes/:id/combustible',       autenticar, autorizar('admin','operador'), viajes.agregarCombustible);
 router.delete('/viajes/:id/combustible/:cId',  autenticar, autorizar('admin','operador'), viajes.eliminarCombustible);
 router.delete('/viajes/:id',                   autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
