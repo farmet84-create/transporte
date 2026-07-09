@@ -218,6 +218,8 @@ router.get ('/costos/operacion',       autenticar, costos.listarOperacion);
 router.post('/costos/operacion',       autenticar, autorizar('admin','contador'), costos.guardarOperacion);
 router.get ('/costos/administrativos', autenticar, costos.listarAdministrativos);
 router.post('/costos/administrativos', autenticar, autorizar('admin','contador'), costos.guardarAdministrativos);
+router.get ('/costos/vehiculo',        autenticar, costos.listarVehiculo);
+router.post('/costos/vehiculo',        autenticar, autorizar('admin','contador'), costos.guardarVehiculo);
 
 // ─── REPORTES ────────────────────────────────────────────
 router.get('/reportes/dashboard',              autenticar, reportes.dashboard);
