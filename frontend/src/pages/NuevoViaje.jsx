@@ -262,18 +262,14 @@ export default function NuevoViaje() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Origen *</label>
-              <select {...register('origen', { required: 'Campo requerido' })} className="input">
-                <option value="">— Seleccionar —</option>
-                {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <input {...register('origen', { required: 'Campo requerido' })}
+                placeholder="Ej: Bogotá" className="input" />
               {errors.origen && <p className="text-red-500 text-xs mt-1">{errors.origen.message}</p>}
             </div>
             <div>
               <label className="label">Destino *</label>
-              <select {...register('destino', { required: 'Campo requerido' })} className="input">
-                <option value="">— Seleccionar —</option>
-                {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <input {...register('destino', { required: 'Campo requerido' })}
+                placeholder="Ej: Medellín" className="input" />
               {errors.destino && <p className="text-red-500 text-xs mt-1">{errors.destino.message}</p>}
             </div>
             <div className="md:col-span-2">
