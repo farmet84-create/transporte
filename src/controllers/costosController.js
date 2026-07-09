@@ -202,7 +202,89 @@ async function guardarAdministrativos(req, res, next) {
   }
 }
 
+// ─── COSTOS MENSUALES POR VEHÍCULO (operación + administrativos) ───
+
+const CAMPOS_OP_VEHICULO = [
+  'provision_mantenimiento','satelital','arriendo','parqueadero','cambio_aceite','gastos_varios'
+];
+const CAMPOS_ADM_VEHICULO = [
+  'soat','tecnomecanica','seguro','salario_conductor','auxilio_transporte','bono_conductor',
+  'seguridad_social','salario_jefe_op','salario_analista','salario_coordinador','sistemas_quirald','otros_gastos'
+];
+const CAMPOS_VEHICULO = [...CAMPOS_OP_VEHICULO, ...CAMPOS_ADM_VEHICULO];
+
+// GET /api/costos/vehiculo?vehiculo_id=&anio=&mes=
+async function listarVehiculo(req, res, next) {
+  try {
+    const empresaId = req.usuario.empresa_id;
+    const { vehiculo_id, anio, mes } = req.query;
+
+    let where = 'WHERE cvm.empresa_id = ?';
+    const params = [empresaId];
+    if (vehiculo_id) { where += ' AND cvm.vehiculo_id = ?'; params.push(vehiculo_id); }
+    if (anio)        { where += ' AND cvm.anio = ?';        params.push(anio); }
+    if (mes)         { where += ' AND cvm.mes = ?';         params.push(mes); }
+
+    const [rows] = await pool.query(
+      `SELECT cvm.*, v.placa, CONCAT(v.marca,' ',v.modelo) AS vehiculo
+       FROM costos_vehiculo_mensual cvm
+       INNER JOIN vehiculos v ON v.id = cvm.vehiculo_id
+       ${where}
+       ORDER BY cvm.anio DESC, cvm.mes DESC, v.placa ASC`,
+      params
+    );
+
+    return ok(res, rows);
+  } catch (err) { next(err); }
+}
+
+// POST /api/costos/vehiculo — registrar o actualizar costos del mes por placa
+async function guardarVehiculo(req, res, next) {
+  try {
+    const empresaId = req.usuario.empresa_id;
+    const { vehiculo_id, anio, mes, observaciones } = req.body;
+
+    if (!vehiculo_id || !anio || !mes)
+      return error(res, 'vehiculo_id, anio y mes son requeridos', 400);
+
+    const valores = CAMPOS_VEHICULO.map(c => parseFloat(req.body[c]) || 0);
+
+    const [existe] = await pool.query(
+      `SELECT id FROM costos_vehiculo_mensual WHERE vehiculo_id = ? AND anio = ? AND mes = ?`,
+      [vehiculo_id, anio, mes]
+    );
+
+    if (existe.length) {
+      await pool.query(
+        `UPDATE costos_vehiculo_mensual SET
+          ${CAMPOS_VEHICULO.map(c => `${c} = ?`).join(', ')},
+          observaciones = ?, actualizado_en = NOW()
+         WHERE vehiculo_id = ? AND anio = ? AND mes = ?`,
+        [...valores, observaciones || null, vehiculo_id, anio, mes]
+      );
+      const [act] = await pool.query(
+        `SELECT * FROM costos_vehiculo_mensual WHERE vehiculo_id = ? AND anio = ? AND mes = ?`,
+        [vehiculo_id, anio, mes]
+      );
+      return ok(res, act[0], 'Costos del vehículo actualizados');
+    } else {
+      const uuid = nuevoUuid();
+      const [result] = await pool.query(
+        `INSERT INTO costos_vehiculo_mensual
+          (uuid, empresa_id, vehiculo_id, anio, mes, ${CAMPOS_VEHICULO.join(', ')}, observaciones, creado_por)
+         VALUES (?,?,?,?,?,${CAMPOS_VEHICULO.map(() => '?').join(',')},?,?)`,
+        [uuid, empresaId, vehiculo_id, anio, mes, ...valores, observaciones || null, req.usuario.id]
+      );
+      const [nuevo] = await pool.query(
+        `SELECT * FROM costos_vehiculo_mensual WHERE id = ?`, [result.insertId]
+      );
+      return ok(res, nuevo[0], 'Costos del vehículo registrados', 201);
+    }
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   listarOperacion, guardarOperacion,
-  listarAdministrativos, guardarAdministrativos
+  listarAdministrativos, guardarAdministrativos,
+  listarVehiculo, guardarVehiculo
 };
