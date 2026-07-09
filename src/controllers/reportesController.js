@@ -132,12 +132,28 @@ async function rentabilidadPorVehiculo(req, res, next) {
       [anioNum, mesNum, ...params]
     );
 
+    // Costos fijos del mes por vehículo (operación + administrativos)
+    const costosFijos = {};
+    try {
+      const [cf] = await pool.query(
+        `SELECT vehiculo_id, total_operacion, total_administrativos, total_costos_mes
+         FROM costos_vehiculo_mensual
+         WHERE empresa_id = ? AND anio = ? AND mes = ?`,
+        [empresaId, anioNum, mesNum]
+      );
+      cf.forEach(c => { costosFijos[c.vehiculo_id] = c; });
+    } catch (e) { /* tabla aún no creada */ }
+
     const resultado = viajes.map((v) => {
       const totalIngresos        = parseFloat(v.total_ingresos || 0)
       const costoGastoDirectos   = parseFloat(v.total_gastos_directos || 0)
       const costoManifiesto      = parseFloat(v.total_descuento_manifiesto || 0)
-      // igual que Excel: TOTAL COSTOS = COSTO VIAJE + COSTOS MANIFIESTO
-      const totalCostos          = costoGastoDirectos + costoManifiesto
+      const cfv                  = costosFijos[v.vehiculo_id] || {}
+      const costosOperacionMes   = parseFloat(cfv.total_operacion || 0)
+      const costosAdminMes       = parseFloat(cfv.total_administrativos || 0)
+      const costosFijosMes       = parseFloat(cfv.total_costos_mes || 0)
+      // TOTAL COSTOS = gastos directos + manifiesto + costos fijos del mes (op + admin)
+      const totalCostos          = costoGastoDirectos + costoManifiesto + costosFijosMes
       const utilidad             = totalIngresos - totalCostos
       const margen               = totalIngresos > 0
         ? parseFloat(((utilidad / totalIngresos) * 100).toFixed(2))
@@ -157,6 +173,9 @@ async function rentabilidadPorVehiculo(req, res, next) {
         total_ingresos:           totalIngresos,
         costos_gastos_directos:   costoGastoDirectos,
         costos_manifiesto:        costoManifiesto,
+        costos_operacion_mes:     costosOperacionMes,
+        costos_administrativos_mes: costosAdminMes,
+        costos_fijos_mes:         costosFijosMes,
         total_costos:             parseFloat(totalCostos.toFixed(2)),
         total_utilidad:           parseFloat(utilidad.toFixed(2)),
         rentabilidad_promedio_pct: margen,  // % Margen = Utilidad / Flete
