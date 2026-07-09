@@ -78,6 +78,8 @@ export const viajesAPI = {
 }
 
 export const costosAPI = {
+  listarVehiculo:         (params) => api.get('/costos/vehiculo', { params }),
+  guardarVehiculo:        (data)   => api.post('/costos/vehiculo', data),
   listarOperacion:        (params) => api.get('/costos/operacion', { params }),
   guardarOperacion:       (data)   => api.post('/costos/operacion', data),
   listarAdministrativos:  (params) => api.get('/costos/administrativos', { params }),
