@@ -384,14 +384,23 @@ export default function DetalleViaje() {
                   <input type="number" value={formViaje.peso_carga_kg || ''} onChange={e => setF('peso_carga_kg', e.target.value)} className="input" /></div>
                 <div><label className="label">Valor manifiesto</label>
                   <input type="number" value={formViaje.valor_manifiesto || 0} onChange={e => setF('valor_manifiesto', e.target.value)} className="input" /></div>
+                <div><label className="label">Flete cobrado al cliente</label>
+                  <input type="number" value={formViaje.valor_flete_cobrado || 0} onChange={e => setF('valor_flete_cobrado', e.target.value)} className="input" /></div>
                 <div><label className="label">Anticipo</label>
                   <input type="number" value={formViaje.anticipo || 0} onChange={e => setF('anticipo', e.target.value)} className="input" /></div>
-                <div><label className="label">Descuento manifiesto</label>
+                <div><label className="label">Retenciones</label>
+                  <input type="number" value={formViaje.retenciones || 0} onChange={e => setF('retenciones', e.target.value)} className="input" /></div>
+                <div className="md:col-span-2"><label className="label">Descuentos adicionales</label>
                   <input type="number" value={formViaje.descuento_manifiesto || 0} onChange={e => setF('descuento_manifiesto', e.target.value)} className="input" /></div>
-                <div>
-                  <label className="label">Saldo</label>
+                <div className="md:col-span-2">
+                  <label className="label">Saldo a pagar (Manifiesto − Retenciones − Descuentos − Anticipo)</label>
                   <div className="input bg-gray-50 font-bold text-gray-900">
-                    {formatCOP((parseFloat(formViaje.valor_manifiesto||0)) - (parseFloat(formViaje.anticipo||0)) - (parseFloat(formViaje.descuento_manifiesto||0)))}
+                    {formatCOP(
+                      parseFloat(formViaje.valor_manifiesto||0)
+                      - parseFloat(formViaje.retenciones||0)
+                      - parseFloat(formViaje.descuento_manifiesto||0)
+                      - parseFloat(formViaje.anticipo||0)
+                    )}
                   </div>
                 </div>
               </div>
@@ -402,9 +411,11 @@ export default function DetalleViaje() {
                 <div><span className="text-gray-500">Tipo de carga:</span> <span className="font-medium">{viaje.tipo_carga || '—'}</span></div>
                 <div><span className="text-gray-500">Peso:</span> <span className="font-medium">{viaje.peso_carga_kg ? `${formatNum(viaje.peso_carga_kg)} kg` : '—'}</span></div>
                 <div><span className="text-gray-500">Valor manifiesto:</span> <span className="font-bold">{formatCOP(viaje.valor_manifiesto)}</span></div>
+                <div><span className="text-gray-500">Flete cobrado:</span> <span className="font-bold">{formatCOP(viaje.valor_flete_cobrado)}</span></div>
                 <div><span className="text-gray-500">Anticipo:</span> <span className="font-semibold text-blue-600">{formatCOP(viaje.anticipo)}</span></div>
-                <div><span className="text-gray-500">Descuento:</span> <span className="font-semibold text-red-600">{formatCOP(viaje.descuento_manifiesto)}</span></div>
-                <div><span className="text-gray-500">Saldo:</span> <span className="font-bold text-green-600">{formatCOP(viaje.saldo_manifiesto)}</span></div>
+                <div><span className="text-gray-500">Retenciones:</span> <span className="font-semibold text-red-600">{formatCOP(viaje.retenciones)}</span></div>
+                <div><span className="text-gray-500">Descuentos adicionales:</span> <span className="font-semibold text-red-600">{formatCOP(viaje.descuento_manifiesto)}</span></div>
+                <div><span className="text-gray-500">Saldo a pagar:</span> <span className="font-bold text-green-600">{formatCOP(viaje.saldo_manifiesto)}</span></div>
               </div>
             )}
           </div>
@@ -482,8 +493,9 @@ export default function DetalleViaje() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Manifiesto</p>
               <FilaCosto label="Valor manifiesto" valor={viaje.valor_manifiesto} />
               <FilaCosto label="Anticipo" valor={viaje.anticipo} color="green" />
-              <FilaCosto label="Descuento" valor={viaje.descuento_manifiesto} color="red" />
-              <FilaCosto label="Saldo a cobrar" valor={viaje.saldo_manifiesto} color="green" />
+              <FilaCosto label="Retenciones" valor={viaje.retenciones} color="red" />
+              <FilaCosto label="Descuentos adicionales" valor={viaje.descuento_manifiesto} color="red" />
+              <FilaCosto label="Saldo a pagar" valor={viaje.saldo_manifiesto} color="green" />
             </div>
             <div className="mb-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Bloque 1 — Gastos directos</p>
