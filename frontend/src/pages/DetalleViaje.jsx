@@ -585,15 +585,6 @@ export default function DetalleViaje() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Bloque 1 — Gastos directos</p>
               <FilaCosto label="Total gastos viaje" valor={viaje.total_gastos_directos} color="red" />
             </div>
-            <div className="mb-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Bloque 2 — Operación/km</p>
-              <FilaCosto label="Total operación" valor={viaje.total_costo_operacion_km} color="red"
-                sub={`${formatNum(viaje.km_recorridos)} km × ${formatCOP(viaje.costo_km_aplicado)}/km`} />
-            </div>
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Bloque 3 — Administrativo</p>
-              <FilaCosto label="Costo admin" valor={viaje.costo_admin_aplicado} color="red" />
-            </div>
             <div className="pt-3 border-t-2 border-gray-200 space-y-2">
               <FilaCosto label="Total costos" valor={viaje.total_costos} color="red" />
               <FilaCosto label="Utilidad bruta" valor={viaje.utilidad_bruta} color={viaje.utilidad_bruta >= 0 ? 'green' : 'red'} />
