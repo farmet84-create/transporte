@@ -8,29 +8,34 @@ const hoy = new Date()
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-const OP_INICIAL = {
-  llantas:0, mantenimiento_preventivo:0, mantenimiento_correctivo:0,
-  aceites_filtros:0, depreciacion:0, seguros:0, soat:0,
-  tecnomecanica:0, impuestos:0, otros:0, km_recorridos_mes:0, observaciones:''
-}
-
-const ADM_INICIAL = {
-  salarios_conductores:0, prestaciones:0, seguridad_social:0,
-  administracion:0, contabilidad:0, arrendamiento:0,
-  servicios_publicos:0, comunicaciones:0, otros:0, observaciones:''
-}
-
-// Solo estos campos se suman — evita sumar id, vehiculo_id, anio, mes, etc.
-const CAMPOS_COSTO_OP = [
-  'llantas','mantenimiento_preventivo','mantenimiento_correctivo',
-  'aceites_filtros','depreciacion','seguros','soat',
-  'tecnomecanica','impuestos','otros'
+const CAMPOS_OP = [
+  { campo: 'provision_mantenimiento', label: 'Provisión mantenimiento' },
+  { campo: 'satelital',               label: 'Satelital' },
+  { campo: 'arriendo',                label: 'Arriendo' },
+  { campo: 'parqueadero',             label: 'Parqueadero' },
+  { campo: 'cambio_aceite',           label: 'Cambio de aceite' },
+  { campo: 'gastos_varios',           label: 'Gastos varios' },
 ]
-const CAMPOS_COSTO_ADM = [
-  'salarios_conductores','prestaciones','seguridad_social',
-  'administracion','contabilidad','arrendamiento',
-  'servicios_publicos','comunicaciones','otros'
+
+const CAMPOS_ADM = [
+  { campo: 'soat',                label: 'SOAT' },
+  { campo: 'tecnomecanica',       label: 'Tecnomecánica' },
+  { campo: 'seguro',              label: 'Seguro' },
+  { campo: 'salario_conductor',   label: 'Salario conductor' },
+  { campo: 'auxilio_transporte',  label: 'Auxilio de transporte' },
+  { campo: 'bono_conductor',      label: 'Bono conductor' },
+  { campo: 'seguridad_social',    label: 'Seguridad social' },
+  { campo: 'salario_jefe_op',     label: 'Salario jefe op' },
+  { campo: 'salario_analista',    label: 'Salario analista' },
+  { campo: 'salario_coordinador', label: 'Salario coordinador' },
+  { campo: 'sistemas_quirald',    label: 'Sistemas Quirald' },
+  { campo: 'otros_gastos',        label: 'Otros gastos' },
 ]
+
+const FORM_INICIAL = Object.fromEntries(
+  [...CAMPOS_OP, ...CAMPOS_ADM].map(c => [c.campo, 0])
+)
+FORM_INICIAL.observaciones = ''
 
 function CampoMonto({ label, campo, form, setForm }) {
   return (
@@ -44,13 +49,11 @@ function CampoMonto({ label, campo, form, setForm }) {
 }
 
 export default function Costos() {
-  const [tab, setTab]               = useState('operacion')
   const [anio, setAnio]             = useState(hoy.getFullYear())
   const [mes, setMes]               = useState(hoy.getMonth() + 1)
   const [vehiculos, setVehiculos]   = useState([])
   const [vehiculoId, setVehiculoId] = useState('')
-  const [formOp, setFormOp]         = useState(OP_INICIAL)
-  const [formAdm, setFormAdm]       = useState(ADM_INICIAL)
+  const [form, setForm]             = useState(FORM_INICIAL)
   const [guardando, setGuardando]   = useState(false)
   const [cargando, setCargando]     = useState(false)
 
@@ -64,40 +67,27 @@ export default function Costos() {
   }, [])
 
   useEffect(() => {
-    if (!vehiculoId || tab !== 'operacion') return
+    if (!vehiculoId) return
     setCargando(true)
-    costosAPI.listarOperacion({ vehiculo_id: vehiculoId, anio, mes })
+    costosAPI.listarVehiculo({ vehiculo_id: vehiculoId, anio, mes })
       .then(r => {
-        if (r.data.datos?.length > 0) setFormOp(r.data.datos[0])
-        else setFormOp(OP_INICIAL)
+        if (r.data.datos?.length > 0) setForm({ ...FORM_INICIAL, ...r.data.datos[0] })
+        else setForm(FORM_INICIAL)
       })
       .catch(() => {})
       .finally(() => setCargando(false))
-  }, [vehiculoId, anio, mes, tab])
+  }, [vehiculoId, anio, mes])
 
-  useEffect(() => {
-    if (tab !== 'administrativos') return
-    setCargando(true)
-    costosAPI.listarAdministrativos({ anio, mes })
-      .then(r => {
-        if (r.data.datos?.length > 0) setFormAdm(r.data.datos[0])
-        else setFormAdm(ADM_INICIAL)
-      })
-      .catch(() => {})
-      .finally(() => setCargando(false))
-  }, [anio, mes, tab])
+  const totalOp  = CAMPOS_OP.reduce((s, c) => s + (parseFloat(form[c.campo]) || 0), 0)
+  const totalAdm = CAMPOS_ADM.reduce((s, c) => s + (parseFloat(form[c.campo]) || 0), 0)
+  const totalMes = totalOp + totalAdm
 
-  // ✅ FIX: solo suma campos de costo, no id/vehiculo_id/anio/mes/etc.
-  const totalOp  = CAMPOS_COSTO_OP.reduce((s, k) => s + (parseFloat(formOp[k]) || 0), 0)
-  const totalAdm = CAMPOS_COSTO_ADM.reduce((s, k) => s + (parseFloat(formAdm[k]) || 0), 0)
-  const costoKm  = formOp.km_recorridos_mes > 0 ? totalOp / formOp.km_recorridos_mes : 0
-
-  const guardarOperacion = async () => {
+  const guardar = async () => {
     if (!vehiculoId) { toast.error('Selecciona un vehículo'); return }
     setGuardando(true)
     try {
-      await costosAPI.guardarOperacion({ ...formOp, vehiculo_id: vehiculoId, anio, mes })
-      toast.success('Costos de operación guardados')
+      await costosAPI.guardarVehiculo({ ...form, vehiculo_id: vehiculoId, anio, mes })
+      toast.success('Costos del vehículo guardados')
     } catch (err) {
       toast.error(err.response?.data?.mensaje || 'Error al guardar')
     } finally {
@@ -105,26 +95,16 @@ export default function Costos() {
     }
   }
 
-  const guardarAdministrativos = async () => {
-    setGuardando(true)
-    try {
-      await costosAPI.guardarAdministrativos({ ...formAdm, anio, mes })
-      toast.success('Costos administrativos guardados')
-    } catch (err) {
-      toast.error(err.response?.data?.mensaje || 'Error al guardar')
-    } finally {
-      setGuardando(false)
-    }
-  }
+  const placaSel = vehiculos.find(v => String(v.id) === String(vehiculoId))?.placa || ''
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       <div>
         <h1 style={{ fontSize:20, fontWeight:800, color:'#111827', margin:0 }}>Costos mensuales</h1>
-        <p style={{ fontSize:13, color:'#6b7280', margin:0 }}>Registra los costos fijos para calcular la rentabilidad real</p>
+        <p style={{ fontSize:13, color:'#6b7280', margin:0 }}>Registra los costos fijos por vehículo — se restan en el reporte del mes para calcular la utilidad real</p>
       </div>
 
-      {/* Selector periodo */}
+      {/* Selector periodo + placa */}
       <div className="card p-4" style={{ display:'flex', flexWrap:'wrap', gap:12, alignItems:'flex-end' }}>
         <div>
           <label className="label">Año</label>
@@ -138,141 +118,81 @@ export default function Costos() {
             {MESES.slice(1).map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
           </select>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={() => setTab('operacion')}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:500, border:'1px solid', cursor:'pointer', background: tab==='operacion'?'#4f46e5':'#fff', color: tab==='operacion'?'#fff':'#374151', borderColor: tab==='operacion'?'#4f46e5':'#d1d5db' }}>
-            <Truck style={{ width:15, height:15 }} /> Operación por vehículo
-          </button>
-          <button onClick={() => setTab('administrativos')}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:500, border:'1px solid', cursor:'pointer', background: tab==='administrativos'?'#4f46e5':'#fff', color: tab==='administrativos'?'#fff':'#374151', borderColor: tab==='administrativos'?'#4f46e5':'#d1d5db' }}>
-            <Building2 style={{ width:15, height:15 }} /> Administrativos
-          </button>
+        <div>
+          <label className="label">Placa</label>
+          <select value={vehiculoId} onChange={e => setVehiculoId(e.target.value)} className="input" style={{ minWidth:220 }}>
+            {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa} — {v.marca} {v.modelo}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* ── OPERACIÓN POR VEHÍCULO ── */}
-      {tab === 'operacion' && (
-        <div className="card p-5">
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:12 }}>
-            <div>
-              <h2 style={{ fontWeight:700, fontSize:15, color:'#111827', margin:0 }}>Costos de operación — {MESES[mes]} {anio}</h2>
-              <p style={{ fontSize:12, color:'#6b7280', margin:'2px 0 0' }}>Bloque 2 — se prorratean por km recorrido</p>
+      {cargando ? (
+        <div style={{ display:'flex', justifyContent:'center', padding:32 }}>
+          <div style={{ width:28, height:28, border:'4px solid #e0e7ff', borderTop:'4px solid #4f46e5', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+        </div>
+      ) : (
+        <>
+          {/* ── COSTOS DE OPERACIÓN ── */}
+          <div className="card p-5">
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+              <Truck style={{ width:18, height:18, color:'#4f46e5' }} />
+              <div>
+                <h2 style={{ fontWeight:700, fontSize:15, color:'#111827', margin:0 }}>Costos de operación — {placaSel} · {MESES[mes]} {anio}</h2>
+              </div>
             </div>
-            <select value={vehiculoId} onChange={e => setVehiculoId(e.target.value)} className="input" style={{ minWidth:200 }}>
-              {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa} — {v.marca} {v.modelo}</option>)}
-            </select>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:14, marginBottom:12 }}>
+              {CAMPOS_OP.map(c => (
+                <CampoMonto key={c.campo} label={c.label} campo={c.campo} form={form} setForm={setForm} />
+              ))}
+            </div>
+            <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:12, padding:'12px 16px', textAlign:'right' }}>
+              <span style={{ fontSize:12, color:'#6b7280', marginRight:10 }}>Total costos de operación:</span>
+              <span style={{ fontWeight:800, fontSize:17, color:'#1d4ed8' }}>{formatCOP(totalOp)}</span>
+            </div>
           </div>
 
-          {cargando ? (
-            <div style={{ display:'flex', justifyContent:'center', padding:32 }}>
-              <div style={{ width:28, height:28, border:'4px solid #e0e7ff', borderTop:'4px solid #4f46e5', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+          {/* ── COSTOS ADMINISTRATIVOS ── */}
+          <div className="card p-5">
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+              <Building2 style={{ width:18, height:18, color:'#4f46e5' }} />
+              <div>
+                <h2 style={{ fontWeight:700, fontSize:15, color:'#111827', margin:0 }}>Costos administrativos — {placaSel} · {MESES[mes]} {anio}</h2>
+              </div>
             </div>
-          ) : (
-            <>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:14, marginBottom:16 }}>
-                <CampoMonto label="Llantas"                  campo="llantas"                  form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Mant. preventivo"         campo="mantenimiento_preventivo" form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Mant. correctivo"         campo="mantenimiento_correctivo" form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Aceites y filtros"        campo="aceites_filtros"          form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Depreciación"             campo="depreciacion"             form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Seguros"                  campo="seguros"                  form={formOp} setForm={setFormOp} />
-                <CampoMonto label="SOAT"                     campo="soat"                     form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Tecnomecánica"            campo="tecnomecanica"            form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Impuestos"                campo="impuestos"                form={formOp} setForm={setFormOp} />
-                <CampoMonto label="Otros"                    campo="otros"                    form={formOp} setForm={setFormOp} />
-                <div>
-                  <label className="label">Km recorridos el mes</label>
-                  <input type="number" value={formOp.km_recorridos_mes}
-                    onChange={e => setFormOp(f => ({ ...f, km_recorridos_mes: parseFloat(e.target.value) || 0 }))}
-                    className="input" placeholder="0" />
-                </div>
-              </div>
-
-              {/* Resumen */}
-              <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, textAlign:'center' }}>
-                  <div>
-                    <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>Total costos operación</p>
-                    <p style={{ fontWeight:800, fontSize:18, color:'#111827', margin:'4px 0 0' }}>{formatCOP(totalOp)}</p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>Km recorridos</p>
-                    <p style={{ fontWeight:800, fontSize:18, color:'#111827', margin:'4px 0 0' }}>{formOp.km_recorridos_mes} km</p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>Costo por km</p>
-                    <p style={{ fontWeight:800, fontSize:20, color:'#4f46e5', margin:'4px 0 0' }}>{formatCOP(costoKm)}/km</p>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom:16 }}>
-                <label className="label">Observaciones</label>
-                <textarea value={formOp.observaciones}
-                  onChange={e => setFormOp(f => ({ ...f, observaciones: e.target.value }))}
-                  rows={2} className="input resize-none" />
-              </div>
-
-              <div style={{ display:'flex', justifyContent:'flex-end' }}>
-                <button onClick={guardarOperacion} disabled={guardando} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <Save style={{ width:15, height:15 }} />
-                  {guardando ? 'Guardando...' : 'Guardar costos de operación'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── ADMINISTRATIVOS ── */}
-      {tab === 'administrativos' && (
-        <div className="card p-5">
-          <div style={{ marginBottom:20 }}>
-            <h2 style={{ fontWeight:700, fontSize:15, color:'#111827', margin:0 }}>Costos administrativos — {MESES[mes]} {anio}</h2>
-            <p style={{ fontSize:12, color:'#6b7280', margin:'2px 0 0' }}>Bloque 3 — se prorratean entre todos los viajes del mes</p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:14, marginBottom:12 }}>
+              {CAMPOS_ADM.map(c => (
+                <CampoMonto key={c.campo} label={c.label} campo={c.campo} form={form} setForm={setForm} />
+              ))}
+            </div>
+            <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:12, padding:'12px 16px', textAlign:'right' }}>
+              <span style={{ fontSize:12, color:'#6b7280', marginRight:10 }}>Total costos administrativos:</span>
+              <span style={{ fontWeight:800, fontSize:17, color:'#b45309' }}>{formatCOP(totalAdm)}</span>
+            </div>
           </div>
 
-          {cargando ? (
-            <div style={{ display:'flex', justifyContent:'center', padding:32 }}>
-              <div style={{ width:28, height:28, border:'4px solid #e0e7ff', borderTop:'4px solid #4f46e5', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+          {/* ── RESUMEN + GUARDAR ── */}
+          <div className="card p-5">
+            <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:12, padding:16, marginBottom:16, textAlign:'center' }}>
+              <p style={{ fontSize:12, color:'#6b7280', margin:0 }}>Total costos del mes — {placaSel}</p>
+              <p style={{ fontWeight:800, fontSize:24, color:'#15803d', margin:'6px 0 4px' }}>{formatCOP(totalMes)}</p>
+              <p style={{ fontSize:11, color:'#9ca3af', margin:0 }}>Operación {formatCOP(totalOp)} + Administrativos {formatCOP(totalAdm)} — se resta de la utilidad del mes en Reportes</p>
             </div>
-          ) : (
-            <>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:14, marginBottom:16 }}>
-                <CampoMonto label="Salarios conductores"  campo="salarios_conductores" form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Prestaciones sociales" campo="prestaciones"         form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Seguridad social"      campo="seguridad_social"     form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Administración"        campo="administracion"       form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Contabilidad"          campo="contabilidad"         form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Arrendamiento"         campo="arrendamiento"        form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Servicios públicos"    campo="servicios_publicos"   form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Comunicaciones"        campo="comunicaciones"       form={formAdm} setForm={setFormAdm} />
-                <CampoMonto label="Otros"                 campo="otros"               form={formAdm} setForm={setFormAdm} />
-              </div>
 
-              {/* Resumen */}
-              <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:12, padding:16, marginBottom:16, textAlign:'center' }}>
-                <p style={{ fontSize:12, color:'#6b7280', margin:0 }}>Total costos administrativos del mes</p>
-                <p style={{ fontWeight:800, fontSize:24, color:'#111827', margin:'6px 0 4px' }}>{formatCOP(totalAdm)}</p>
-                <p style={{ fontSize:11, color:'#9ca3af', margin:0 }}>Se dividirá entre el número de viajes completados en {MESES[mes]}</p>
-              </div>
+            <div style={{ marginBottom:16 }}>
+              <label className="label">Observaciones</label>
+              <textarea value={form.observaciones || ''}
+                onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))}
+                rows={2} className="input resize-none" />
+            </div>
 
-              <div style={{ marginBottom:16 }}>
-                <label className="label">Observaciones</label>
-                <textarea value={formAdm.observaciones}
-                  onChange={e => setFormAdm(f => ({ ...f, observaciones: e.target.value }))}
-                  rows={2} className="input resize-none" />
-              </div>
-
-              <div style={{ display:'flex', justifyContent:'flex-end' }}>
-                <button onClick={guardarAdministrativos} disabled={guardando} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <Save style={{ width:15, height:15 }} />
-                  {guardando ? 'Guardando...' : 'Guardar costos administrativos'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+            <div style={{ display:'flex', justifyContent:'flex-end' }}>
+              <button onClick={guardar} disabled={guardando} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <Save style={{ width:15, height:15 }} />
+                {guardando ? 'Guardando...' : 'Guardar costos del mes'}
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
