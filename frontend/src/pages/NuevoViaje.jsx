@@ -1,4 +1,4 @@
- import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Search, Plus, Trash2 } from 'lucide-react'
@@ -347,10 +347,17 @@ export default function NuevoViaje() {
               <input type="number" {...register('retenciones')} placeholder="0" className="input" />
             </div>
             <div className="md:col-span-2">
-              <label className="label">Saldo (Flete − Anticipo)</label>
+              <label className="label">Descuentos adicionales</label>
+              <input type="number" {...register('descuento_manifiesto')} placeholder="0" className="input" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label">Saldo a pagar (Manifiesto − Retenciones − Descuentos − Anticipo)</label>
               <div className="input bg-gray-50 font-semibold text-gray-700">
                 {(() => {
-                  const saldo = parseFloat(watch('valor_flete_cobrado') || 0) - parseFloat(watch('anticipo') || 0)
+                  const saldo = parseFloat(watch('valor_manifiesto') || 0)
+                    - parseFloat(watch('retenciones') || 0)
+                    - parseFloat(watch('descuento_manifiesto') || 0)
+                    - parseFloat(watch('anticipo') || 0)
                   return saldo !== 0 ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(saldo) : '—'
                 })()}
               </div>
