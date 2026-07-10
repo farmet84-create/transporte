@@ -279,6 +279,53 @@ async function evolucionMensual(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// GET /api/reportes/resumen — totales con filtros de placa, cliente y fechas
+async function resumenFiltrado(req, res, next) {
+  try {
+    const empresaId = req.usuario.empresa_id;
+    const { placa, cliente_id, conductor_id, fecha_inicio, fecha_fin } = req.query;
+
+    let where = 'WHERE v.empresa_id = ? AND v.eliminado_en IS NULL';
+    const params = [empresaId];
+
+    if (placa)        { where += ' AND vh.placa LIKE ?';       params.push(`%${placa.toUpperCase()}%`); }
+    if (cliente_id)   { where += ' AND v.cliente_id = ?';      params.push(cliente_id); }
+    if (conductor_id) { where += ' AND v.conductor_id = ?';    params.push(conductor_id); }
+    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?';   params.push(fecha_inicio); }
+    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?';   params.push(fecha_fin); }
+
+    const [[t]] = await pool.query(
+      `SELECT
+          COUNT(*)                                  AS total_viajes,
+          COALESCE(SUM(v.valor_flete_cobrado), 0)   AS total_fletes,
+          COALESCE(SUM(v.total_gastos_directos), 0) AS total_gastos,
+          COALESCE(SUM(v.saldo_manifiesto), 0)      AS total_saldos,
+          COALESCE(SUM(v.km_recorridos), 0)         AS total_km
+       FROM viajes v
+       INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
+       ${where}`,
+      params
+    );
+
+    const fletes   = parseFloat(t.total_fletes || 0);
+    const gastos   = parseFloat(t.total_gastos || 0);
+    const utilidad = fletes - gastos;
+    const margen       = fletes > 0 ? parseFloat(((utilidad / fletes) * 100).toFixed(2)) : 0;
+    const rentabilidad = gastos > 0 ? parseFloat(((utilidad / gastos) * 100).toFixed(2)) : 0;
+
+    return ok(res, {
+      total_viajes:  t.total_viajes,
+      total_fletes:  fletes,
+      total_gastos:  gastos,
+      total_saldos:  parseFloat(t.total_saldos || 0),
+      total_km:      parseFloat(t.total_km || 0),
+      utilidad,
+      margen_pct:       margen,
+      rentabilidad_pct: rentabilidad,
+    });
+  } catch (err) { next(err); }
+}
+
 function calcularVariacion(actual, anterior) {
   if (!anterior || anterior === 0) return null;
   return parseFloat(((actual - anterior) / Math.abs(anterior) * 100).toFixed(2));
@@ -290,4 +337,5 @@ module.exports = {
   rentabilidadPorConductor,
   rentabilidadPorCliente,
   evolucionMensual,
+  resumenFiltrado,
 };
