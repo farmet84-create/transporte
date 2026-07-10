@@ -56,7 +56,7 @@ const TooltipPct = ({ active, payload, label }) => {
   )
 }
 
-const KPI = ({ label, valor, sub, color='gray', icon:Icon, trend }) => {
+const KPI = ({ label, valor, sub, color='gray', icon:Icon, trend, info }) => {
   const colors = {
     blue:   { bg:'#eff6ff', text:'#1d4ed8', icon:'#3b82f6' },
     green:  { bg:'#f0fdf4', text:'#15803d', icon:'#22c55e' },
@@ -68,7 +68,12 @@ const KPI = ({ label, valor, sub, color='gray', icon:Icon, trend }) => {
   return (
     <div className="card p-4">
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:8 }}>
-        <p style={{ fontSize:11, fontWeight:600, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', margin:0 }}>{label}</p>
+        <p style={{ fontSize:11, fontWeight:600, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', margin:0 }}>
+          {label}
+          {info && (
+            <span title={info} style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:15, height:15, borderRadius:'50%', background:'#e0e7ff', color:'#4f46e5', fontSize:10, fontWeight:700, marginLeft:6, cursor:'help', verticalAlign:'middle' }}>i</span>
+          )}
+        </p>
         <div style={{ width:34, height:34, borderRadius:10, background:c.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginLeft:8 }}>
           <Icon style={{ width:16, height:16, color:c.icon }} />
         </div>
@@ -534,12 +539,16 @@ export default function Reportes() {
               <ResumenEjecutivo anio={anio} mes={mes} />
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }} className="md:grid-cols-4">
-                <KPI label={`Ingresos ${anio}`} icon={DollarSign} color="blue" valor={formatCOP(totalAnio.ingresos)} sub={`${totalAnio.viajes} viajes`} />
-                <KPI label={`Utilidad ${anio}`} icon={TrendingUp} color={totalAnio.utilidad>=0?'green':'red'} valor={formatCOP(totalAnio.utilidad)} sub={`Costos: ${formatCOP(totalAnio.costos)}`} />
-                <KPI label="Rentabilidad anual" icon={Target} color="purple" valor={`${rentAnio}%`} sub="Utilidad / Ingresos" />
+                <KPI label={`Ingresos ${anio}`} icon={DollarSign} color="blue" valor={formatCOP(totalAnio.ingresos)} sub={`${totalAnio.viajes} viajes`}
+                  info={`Suma de los fletes cobrados de todos los viajes completados de todas las placas durante ${anio}`} />
+                <KPI label={`Utilidad ${anio}`} icon={TrendingUp} color={totalAnio.utilidad>=0?'green':'red'} valor={formatCOP(totalAnio.utilidad)} sub={`Costos: ${formatCOP(totalAnio.costos)}`}
+                  info={`Ingresos del año menos los gastos de todos los viajes completados de ${anio}`} />
+                <KPI label="Rentabilidad anual" icon={Target} color="purple" valor={`${rentAnio}%`} sub="Utilidad / Ingresos"
+                  info={`Utilidad de ${anio} dividida entre los ingresos de ${anio}, por 100`} />
                 <KPI label={`Mes: ${MESES[mes]}`} icon={BarChart2} color="blue"
                   valor={formatCOP(mesActual?.total_ingresos||0)}
                   sub={`Utilidad: ${formatCOP(mesActual?.total_utilidad||0)}`}
+                  info={`Fletes cobrados de los viajes completados de ${MESES[mes]} ${anio}; abajo la utilidad de ese mes`}
                   trend={mesAnterior?.total_ingresos>0 ? ((mesActual?.total_ingresos-mesAnterior?.total_ingresos)/mesAnterior?.total_ingresos*100) : undefined} />
               </div>
 
