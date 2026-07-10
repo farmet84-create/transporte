@@ -1,4 +1,4 @@
-'use strict';
+ 'use strict';
 
 const { pool } = require('../config/database');
 const { ok, error } = require('../utils/helpers');
@@ -307,18 +307,38 @@ async function resumenFiltrado(req, res, next) {
       params
     );
 
-    const fletes   = parseFloat(t.total_fletes || 0);
-    const gastos   = parseFloat(t.total_gastos || 0);
-    const utilidad = fletes - gastos;
-    const margen       = fletes > 0 ? parseFloat(((utilidad / fletes) * 100).toFixed(2)) : 0;
-    const rentabilidad = gastos > 0 ? parseFloat(((utilidad / gastos) * 100).toFixed(2)) : 0;
+    // Costos mensuales fijos de las placas y meses cubiertos por los viajes filtrados
+    let costosFijos = 0;
+    try {
+      const [[cf]] = await pool.query(
+        `SELECT COALESCE(SUM(cvm.total_costos_mes), 0) AS total_costos_fijos
+         FROM costos_vehiculo_mensual cvm
+         INNER JOIN (
+           SELECT DISTINCT v.vehiculo_id, YEAR(v.fecha_salida) AS anio, MONTH(v.fecha_salida) AS mes
+           FROM viajes v
+           INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
+           ${where}
+         ) m ON m.vehiculo_id = cvm.vehiculo_id AND m.anio = cvm.anio AND m.mes = cvm.mes`,
+        params
+      );
+      costosFijos = parseFloat(cf.total_costos_fijos || 0);
+    } catch (e) { /* tabla aún no creada */ }
+
+    const fletes      = parseFloat(t.total_fletes || 0);
+    const gastos      = parseFloat(t.total_gastos || 0);
+    const costosTotal = gastos + costosFijos;
+    const utilidad    = fletes - costosTotal;
+    const margen       = fletes > 0      ? parseFloat(((utilidad / fletes) * 100).toFixed(2)) : 0;
+    const rentabilidad = costosTotal > 0 ? parseFloat(((utilidad / costosTotal) * 100).toFixed(2)) : 0;
 
     return ok(res, {
-      total_viajes:  t.total_viajes,
-      total_fletes:  fletes,
-      total_gastos:  gastos,
-      total_saldos:  parseFloat(t.total_saldos || 0),
-      total_km:      parseFloat(t.total_km || 0),
+      total_viajes:       t.total_viajes,
+      total_fletes:       fletes,
+      total_gastos:       gastos,
+      total_costos_fijos: costosFijos,
+      total_costos:       costosTotal,
+      total_saldos:       parseFloat(t.total_saldos || 0),
+      total_km:           parseFloat(t.total_km || 0),
       utilidad,
       margen_pct:       margen,
       rentabilidad_pct: rentabilidad,
