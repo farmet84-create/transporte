@@ -127,10 +127,12 @@ export default function Dashboard() {
   const [cargando, setCargando]   = useState(true)
   const [conductores, setConductores] = useState([])
   const [clientes, setClientes]       = useState([])
+  const [listaVehiculos, setListaVehiculos] = useState([])
 
   useEffect(() => {
     conductoresAPI.listar({ limite:100 }).then(r => setConductores(r.data.datos||[])).catch(()=>{})
     clientesAPI.listar({ limite:100 }).then(r => setClientes(r.data.datos||[])).catch(()=>{})
+    vehiculosAPI.listar({ activo:true, limite:100 }).then(r => setListaVehiculos(r.data.datos||[])).catch(()=>{})
   }, [])
 
   const cargar = useCallback(async () => {
@@ -202,7 +204,10 @@ export default function Dashboard() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:10 }}>
             <div>
               <label className="label">Placa</label>
-              <input value={filtros.placa} onChange={e => setFiltros(f=>({...f, placa:e.target.value.toUpperCase()}))} placeholder="ABC123" className="input font-mono uppercase" style={{ fontSize:13 }} />
+              <select value={filtros.placa} onChange={e => setFiltros(f=>({...f, placa:e.target.value}))} className="input" style={{ fontSize:13 }}>
+                <option value="">Todas</option>
+                {listaVehiculos.map(v => <option key={v.id} value={v.placa}>{v.placa} — {v.marca} {v.modelo}</option>)}
+              </select>
             </div>
             <div>
               <label className="label">Conductor</label>
