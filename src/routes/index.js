@@ -212,6 +212,8 @@ router.delete('/viajes/:id/gastos-preop/:gastoId',   autenticar, autorizar('admi
 router.post  ('/viajes/:id/combustible',       autenticar, autorizar('admin','operador'), viajes.agregarCombustible);
 router.delete('/viajes/:id/combustible/:cId',  autenticar, autorizar('admin','operador'), viajes.eliminarCombustible);
 router.delete('/viajes/:id',                   autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
+router.get   ('/cuentas-cobrar',               autenticar, autorizar('admin'), viajes.listarCuentasCobrar);
+router.put   ('/cuentas-cobrar/:id',           autenticar, autorizar('admin'), viajes.actualizarCuentaCobrar);
 
 // ─── COSTOS ──────────────────────────────────────────────
 router.get ('/costos/operacion',       autenticar, costos.listarOperacion);
