@@ -92,6 +92,7 @@ export const reportesAPI = {
   porConductor:     (params) => api.get('/reportes/rentabilidad-conductor', { params }),
   porCliente:       (params) => api.get('/reportes/rentabilidad-cliente', { params }),
   evolucionMensual: (params) => api.get('/reportes/evolucion-mensual', { params }),
+  resumen:          (params) => api.get('/reportes/resumen', { params }),
 }
 
 export const suscripcionAPI = {
