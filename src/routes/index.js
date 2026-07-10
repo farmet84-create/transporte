@@ -227,6 +227,7 @@ router.get('/reportes/rentabilidad-vehiculo',  autenticar, reportes.rentabilidad
 router.get('/reportes/rentabilidad-conductor', autenticar, reportes.rentabilidadPorConductor);
 router.get('/reportes/rentabilidad-cliente',   autenticar, reportes.rentabilidadPorCliente);
 router.get('/reportes/evolucion-mensual',      autenticar, reportes.evolucionMensual);
+router.get('/reportes/resumen',                autenticar, reportes.resumenFiltrado);
 
 // ─── ALERTAS ─────────────────────────────────────────────
 router.get('/alertas', autenticar, alertas.listar);
