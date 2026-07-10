@@ -282,6 +282,139 @@ CLIENTES: ${datos.clientes?.slice(0,5).map(c=>`${c.cliente}: ${formatCOP(c.total
   )
 }
 
+// ── RESUMEN EJECUTIVO ─────────────────────────────────────
+// Fórmulas: Utilidad = Fletes − Gastos viajes − Costos mensuales placas
+//           Margen = Utilidad/Fletes ·  Rentabilidad = Utilidad/Costos totales
+function ResumenEjecutivo({ anio, mes }) {
+  const [act, setAct] = useState(null)
+  const [ant, setAnt] = useState(null)
+
+  useEffect(() => {
+    const rango = (a, m) => {
+      const fin = new Date(a, m, 0).getDate()
+      const mm  = String(m).padStart(2, '0')
+      return { fecha_inicio: `${a}-${mm}-01`, fecha_fin: `${a}-${mm}-${fin}` }
+    }
+    const mAnt = mes === 1 ? 12 : mes - 1
+    const aAnt = mes === 1 ? anio - 1 : anio
+    reportesAPI.resumen(rango(anio, mes)).then(r => setAct(r.data.datos)).catch(() => {})
+    reportesAPI.resumen(rango(aAnt, mAnt)).then(r => setAnt(r.data.datos)).catch(() => {})
+  }, [anio, mes])
+
+  if (!act) return null
+
+  const mAnt     = mes === 1 ? 12 : mes - 1
+  const ingresos = parseFloat(act.total_fletes || 0)
+  const gastos   = parseFloat(act.total_gastos || 0)
+  const fijos    = parseFloat(act.total_costos_fijos || 0)
+  const costos   = gastos + fijos
+  const utilidad = parseFloat(act.utilidad || 0)
+  const saldos   = parseFloat(act.total_saldos || 0)
+
+  const delta = (a, b) => (b && parseFloat(b) !== 0) ? ((a - parseFloat(b)) / Math.abs(parseFloat(b)) * 100) : null
+
+  const tiles = [
+    { label:'Ingresos (fletes)',  valor: formatCOP(ingresos), color:'#1d4ed8', d: delta(ingresos, ant?.total_fletes) },
+    { label:'Gastos de viajes',   valor: formatCOP(gastos),   color:'#dc2626', d: delta(gastos, ant?.total_gastos) },
+    { label:'Costos mensuales',   valor: formatCOP(fijos),    color:'#ea580c', d: delta(fijos, ant?.total_costos_fijos) },
+    { label:'Utilidad neta',      valor: formatCOP(utilidad), color: utilidad >= 0 ? '#15803d' : '#dc2626', d: delta(utilidad, ant?.utilidad) },
+    { label:'Margen',             valor: `${parseFloat(act.margen_pct||0).toFixed(1)}%`,       color:'#4f46e5' },
+    { label:'Rentabilidad',       valor: `${parseFloat(act.rentabilidad_pct||0).toFixed(1)}%`, color:'#7c3aed' },
+    { label:'Saldos por cobrar',  valor: formatCOP(saldos),   color:'#b45309', d: delta(saldos, ant?.total_saldos) },
+    { label:'Viajes · Km',        valor: `${act.total_viajes} · ${parseFloat(act.total_km||0).toLocaleString('es-CO')} km`, color:'#111827' },
+  ]
+
+  // Composición: cada peso de ingreso en qué se va
+  const pGastos = ingresos > 0 ? Math.min(100, (gastos / ingresos) * 100) : 0
+  const pFijos  = ingresos > 0 ? Math.min(100 - pGastos, (fijos / ingresos) * 100) : 0
+  const pUtil   = Math.max(0, 100 - pGastos - pFijos)
+
+  const comparativo = [
+    { nombre:'Ingresos',     [MESES[mAnt]]: parseFloat(ant?.total_fletes||0),       [MESES[mes]]: ingresos },
+    { nombre:'Gastos viajes',[MESES[mAnt]]: parseFloat(ant?.total_gastos||0),       [MESES[mes]]: gastos },
+    { nombre:'Costos mens.', [MESES[mAnt]]: parseFloat(ant?.total_costos_fijos||0), [MESES[mes]]: fijos },
+    { nombre:'Utilidad',     [MESES[mAnt]]: parseFloat(ant?.utilidad||0),           [MESES[mes]]: utilidad },
+  ]
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {/* Encabezado */}
+      <div style={{ background:'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)', borderRadius:16, padding:'18px 22px', color:'#fff' }}>
+        <p style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', opacity:0.75, margin:0 }}>Resumen ejecutivo</p>
+        <h2 style={{ fontSize:20, fontWeight:900, margin:'2px 0 0' }}>{MESES[mes]} {anio} — todas las placas</h2>
+        <p style={{ fontSize:12, opacity:0.75, margin:'4px 0 0' }}>
+          Utilidad = Fletes − Gastos de viajes − Costos mensuales · Margen = Utilidad/Fletes · Rentabilidad = Utilidad/Costos
+        </p>
+      </div>
+
+      {/* Indicadores */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10 }} className="md:grid-cols-4">
+        {tiles.map((t, i) => (
+          <div key={i} className="card" style={{ padding:'14px 16px' }}>
+            <p style={{ fontSize:11, fontWeight:600, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.04em', margin:0 }}>{t.label}</p>
+            <p style={{ fontSize:18, fontWeight:900, color:t.color, margin:'5px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.valor}</p>
+            {t.d != null && (
+              <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:5, fontSize:11, fontWeight:600, color: t.d >= 0 ? '#16a34a' : '#dc2626' }}>
+                {t.d >= 0 ? <TrendingUp style={{ width:11, height:11 }}/> : <TrendingDown style={{ width:11, height:11 }}/>}
+                {t.d >= 0 ? '+' : ''}{t.d.toFixed(1)}% vs {MESES[mAnt]}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:14 }} className="lg:grid-cols-2">
+        {/* Composición del ingreso */}
+        <ChartCard title="¿A dónde va cada peso de ingreso?">
+          <div style={{ display:'flex', height:34, borderRadius:10, overflow:'hidden', marginBottom:14 }}>
+            {pGastos > 0 && <div style={{ width:`${pGastos}%`, background:'#ef4444' }} />}
+            {pFijos  > 0 && <div style={{ width:`${pFijos}%`,  background:'#f97316' }} />}
+            {pUtil   > 0 && <div style={{ width:`${pUtil}%`,   background:'#22c55e' }} />}
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {[
+              { color:'#ef4444', label:'Gastos de viajes',  valor: gastos,   pct: pGastos },
+              { color:'#f97316', label:'Costos mensuales',  valor: fijos,    pct: pFijos },
+              { color:'#22c55e', label:'Utilidad',          valor: utilidad, pct: pUtil },
+            ].map((f, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:13 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:10, height:10, borderRadius:3, background:f.color }} />
+                  <span style={{ color:'#374151' }}>{f.label}</span>
+                </div>
+                <div>
+                  <span style={{ fontWeight:700, color:'#111827' }}>{formatCOP(f.valor)}</span>
+                  <span style={{ color:'#9ca3af', marginLeft:8, fontSize:12 }}>{f.pct.toFixed(1)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {utilidad < 0 && (
+            <p style={{ fontSize:12, color:'#dc2626', fontWeight:600, marginTop:10 }}>
+              ⚠ Este mes los costos superan los ingresos: pérdida de {formatCOP(Math.abs(utilidad))}
+            </p>
+          )}
+        </ChartCard>
+
+        {/* Comparativo vs mes anterior */}
+        <ChartCard title={`Comparativo ${MESES[mAnt]} vs ${MESES[mes]}`}>
+          <ResponsiveContainer width="100%" height={230}>
+            <BarChart data={comparativo} barGap={4}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="nombre" tick={{ fontSize:11, fill:'#374151' }} />
+              <YAxis tickFormatter={v => `$${(v/1000000).toFixed(0)}M`} tick={{ fontSize:10, fill:'#374151' }} width={42} />
+              <Tooltip formatter={v => formatCOP(v)} />
+              <Legend wrapperStyle={{ fontSize:11 }} />
+              <Bar dataKey={MESES[mAnt]} fill="#c7d2fe" radius={[3,3,0,0]} />
+              <Bar dataKey={MESES[mes]}  fill="#4f46e5" radius={[3,3,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+    </div>
+  )
+}
+
 // ── PÁGINA PRINCIPAL ──────────────────────────────────────
 export default function Reportes() {
   const [anio, setAnio] = useState(hoy.getFullYear())
@@ -341,8 +474,6 @@ export default function Reportes() {
 
   const tabs = [
     { id:'dashboard',   label:'Dashboard',   icon:BarChart2 },
-    { id:'vehiculos',   label:'Vehículos',   icon:Truck },
-    { id:'conductores', label:'Conductores', icon:Users },
     { id:'clientes',    label:'Clientes',    icon:Building2 },
     { id:'ia',          label:'IA',          icon:Brain },
   ]
@@ -400,6 +531,8 @@ export default function Reportes() {
           {/* ── DASHBOARD ── */}
           {tab === 'dashboard' && (
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <ResumenEjecutivo anio={anio} mes={mes} />
+
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }} className="md:grid-cols-4">
                 <KPI label={`Ingresos ${anio}`} icon={DollarSign} color="blue" valor={formatCOP(totalAnio.ingresos)} sub={`${totalAnio.viajes} viajes`} />
                 <KPI label={`Utilidad ${anio}`} icon={TrendingUp} color={totalAnio.utilidad>=0?'green':'red'} valor={formatCOP(totalAnio.utilidad)} sub={`Costos: ${formatCOP(totalAnio.costos)}`} />
@@ -468,148 +601,6 @@ export default function Reportes() {
                     </ResponsiveContainer>
                   ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:160, color:'#9ca3af', fontSize:13 }}>Sin datos en {MESES[mes]}</div>}
                 </ChartCard>
-              </div>
-            </div>
-          )}
-
-          {/* ── VEHÍCULOS ── */}
-          {tab === 'vehiculos' && (
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <div className="card p-4" style={{ display:'flex', alignItems:'flex-end', gap:10, flexWrap:'wrap' }}>
-                <div style={{ flex:1, minWidth:160 }}>
-                  <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:4 }}>Filtrar por vehículo</label>
-                  <select value={placaFiltro} onChange={e => setPlacaFiltro(e.target.value)} className="input" style={{ fontSize:13 }}>
-                    <option value="">Todos los vehículos</option>
-                    {listaVehiculos.map(v => <option key={v.id} value={v.placa}>{v.placa} — {v.marca} {v.modelo}</option>)}
-                  </select>
-                </div>
-                {placaFiltro && (
-                  <button onClick={() => setPlacaFiltro('')} style={{ padding:'7px 12px', fontSize:13, color:'#dc2626', border:'1px solid #fecaca', borderRadius:8, background:'transparent', cursor:'pointer' }}>
-                    Limpiar
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:14 }} className="lg:grid-cols-2">
-                <ChartCard title={`Utilidad por vehículo — ${MESES[mes]}`}>
-                  <ResponsiveContainer width="100%" height={230}>
-                    <BarChart data={vehiculos} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis type="number" tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={tickStyle} />
-                      <YAxis type="category" dataKey="placa" tick={{ fontSize:11, fontWeight:600, fill:'#374151' }} width={60} />
-                      <Tooltip formatter={v => formatCOP(v)} />
-                      <Bar dataKey="total_utilidad" name="Utilidad" radius={[0,4,4,0]}>
-                        {vehiculos.map((e,i) => <Cell key={i} fill={parseFloat(e.total_utilidad)>=0?'#22c55e':'#ef4444'} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-                <ChartCard title="Rentabilidad % por vehículo">
-                  <ResponsiveContainer width="100%" height={230}>
-                    <BarChart data={vehiculos} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis type="number" tickFormatter={v => `${v}%`} tick={tickStyle} />
-                      <YAxis type="category" dataKey="placa" tick={{ fontSize:11, fontWeight:600, fill:'#374151' }} width={60} />
-                      <Tooltip formatter={v => `${parseFloat(v).toFixed(1)}%`} />
-                      <Bar dataKey="rentabilidad_promedio_pct" name="Rentabilidad %" radius={[0,4,4,0]}>
-                        {vehiculos.map((e,i) => <Cell key={i} fill={COLORES[i%COLORES.length]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-              </div>
-
-              {/* Detalle vehículos */}
-              <div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10, flexWrap:'wrap', gap:8 }}>
-                  <h3 style={{ fontWeight:700, fontSize:14, color:'#111827', margin:0 }}>Detalle por vehículo — {MESES[mes]} {anio}</h3>
-                  <BtnCSV onClick={() => descargarCSV(vehiculos,[{key:'placa',label:'Placa'},{key:'vehiculo',label:'Vehículo'},{key:'total_viajes',label:'Viajes'},{key:'total_km',label:'Km'},{key:'total_ingresos',label:'Ingresos'},{key:'total_costos',label:'Costos'},{key:'total_utilidad',label:'Utilidad'},{key:'rentabilidad_promedio_pct',label:'Rentabilidad %'}],`vehiculos-${MESES[mes]}-${anio}`)} />
-                </div>
-                {/* Móvil: cards */}
-                <div className="lg:hidden">
-                  {vehiculos.length===0
-                    ? <p style={{ textAlign:'center', color:'#9ca3af', padding:24, fontSize:13 }}>Sin datos para {MESES[mes]}</p>
-                    : vehiculos.map((v,i) => <CardVehiculo key={i} v={v} />)}
-                </div>
-                {/* Desktop: tabla */}
-                <div className="hidden lg:block" style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', overflow:'hidden' }}>
-                  <table style={{ width:'100%', fontSize:13, borderCollapse:'collapse' }}>
-                    <TablaHeader cols={['Placa','Vehículo','Viajes','Km','Ingresos','Costos','Utilidad','Rentabilidad']} />
-                    <tbody>
-                      {vehiculos.length===0
-                        ? <tr><td colSpan={8} style={{ textAlign:'center', padding:32, color:'#9ca3af', fontSize:13 }}>Sin datos para {MESES[mes]}</td></tr>
-                        : vehiculos.map((v,i) => (
-                        <tr key={i} style={{ borderBottom:'1px solid #f3f4f6' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#f9fafb'}
-                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                          <td style={{ padding:'10px 14px' }}><span style={{ fontFamily:'monospace', fontWeight:700, background:'#f3f4f6', padding:'2px 8px', borderRadius:6, fontSize:12, color:'#111827' }}>{v.placa}</span></td>
-                          <td style={{ padding:'10px 14px', fontWeight:500, color:'#111827' }}>{v.vehiculo}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'center', color:'#374151' }}>{v.total_viajes}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', color:'#374151' }}>{parseInt(v.total_km||0).toLocaleString('es-CO')}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:500, color:'#1d4ed8' }}>{formatCOP(v.total_ingresos)}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', color:'#dc2626' }}>{formatCOP(v.total_costos)}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, color: parseFloat(v.total_utilidad)>=0?'#15803d':'#dc2626' }}>{formatCOP(v.total_utilidad)}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right' }}><span style={{ fontWeight:700 }} className={colorRentabilidad(v.rentabilidad_promedio_pct)}>{parseFloat(v.rentabilidad_promedio_pct||0).toFixed(1)}%</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── CONDUCTORES ── */}
-          {tab === 'conductores' && (
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <ChartCard title={`Utilidad por conductor — ${MESES[mes]}`}>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={conductores} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={tickStyle} />
-                    <YAxis type="category" dataKey="conductor" tickFormatter={v => v?.split(' ')[0]} tick={{ fontSize:11, fill:'#374151' }} width={80} />
-                    <Tooltip formatter={v => formatCOP(v)} />
-                    <Bar dataKey="total_utilidad" name="Utilidad" radius={[0,4,4,0]}>
-                      {conductores.map((e,i) => <Cell key={i} fill={COLORES[i%COLORES.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10, flexWrap:'wrap', gap:8 }}>
-                  <h3 style={{ fontWeight:700, fontSize:14, color:'#111827', margin:0 }}>Detalle por conductor — {MESES[mes]} {anio}</h3>
-                  <BtnCSV onClick={() => descargarCSV(conductores,[{key:'conductor',label:'Conductor'},{key:'numero_documento',label:'Documento'},{key:'total_viajes',label:'Viajes'},{key:'total_km',label:'Km'},{key:'total_ingresos',label:'Ingresos'},{key:'total_utilidad',label:'Utilidad'},{key:'rentabilidad_promedio_pct',label:'Rentabilidad %'}],`conductores-${MESES[mes]}-${anio}`)} />
-                </div>
-                {/* Móvil */}
-                <div className="lg:hidden">
-                  {conductores.length===0
-                    ? <p style={{ textAlign:'center', color:'#9ca3af', padding:24, fontSize:13 }}>Sin datos para {MESES[mes]}</p>
-                    : conductores.map((c,i) => <CardConductor key={i} c={c} />)}
-                </div>
-                {/* Desktop */}
-                <div className="hidden lg:block" style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', overflow:'hidden' }}>
-                  <table style={{ width:'100%', fontSize:13, borderCollapse:'collapse' }}>
-                    <TablaHeader cols={['Conductor','Documento','Viajes','Km','Ingresos','Utilidad','Rentabilidad']} />
-                    <tbody>
-                      {conductores.length===0
-                        ? <tr><td colSpan={7} style={{ textAlign:'center', padding:32, color:'#9ca3af', fontSize:13 }}>Sin datos para {MESES[mes]}</td></tr>
-                        : conductores.map((c,i) => (
-                        <tr key={i} style={{ borderBottom:'1px solid #f3f4f6' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='#f9fafb'}
-                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                          <td style={{ padding:'10px 14px', fontWeight:600, color:'#111827' }}>{c.conductor}</td>
-                          <td style={{ padding:'10px 14px', color:'#6b7280', fontSize:12 }}>{c.numero_documento}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'center', color:'#374151' }}>{c.total_viajes}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', color:'#374151' }}>{parseInt(c.total_km||0).toLocaleString('es-CO')}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:500, color:'#1d4ed8' }}>{formatCOP(c.total_ingresos)}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right', fontWeight:700, color: parseFloat(c.total_utilidad)>=0?'#15803d':'#dc2626' }}>{formatCOP(c.total_utilidad)}</td>
-                          <td style={{ padding:'10px 14px', textAlign:'right' }}><span style={{ fontWeight:700 }} className={colorRentabilidad(c.rentabilidad_promedio_pct)}>{parseFloat(c.rentabilidad_promedio_pct||0).toFixed(1)}%</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           )}
