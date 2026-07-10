@@ -1,4 +1,4 @@
- 'use strict';
+'use strict';
 
 const { pool } = require('../config/database');
 const { ok, error } = require('../utils/helpers');
@@ -15,9 +15,7 @@ async function dashboard(req, res, next) {
           COUNT(*)                          AS total_viajes,
           SUM(km_recorridos)                AS total_km,
           SUM(valor_flete_cobrado)          AS total_ingresos,
-          SUM(total_costos)                 AS total_costos,
-          SUM(utilidad_neta)                AS total_utilidad,
-          ROUND(AVG(rentabilidad_pct), 2)   AS rentabilidad_promedio,
+          SUM(total_gastos_directos)        AS total_gastos,
           SUM(CASE WHEN rentabilidad_pct >= 20 THEN 1 ELSE 0 END) AS viajes_rentables,
           SUM(CASE WHEN rentabilidad_pct < 0  THEN 1 ELSE 0 END)  AS viajes_perdida
        FROM viajes
@@ -31,13 +29,43 @@ async function dashboard(req, res, next) {
 
     const [[kpisAnt]] = await pool.query(
       `SELECT SUM(valor_flete_cobrado) AS total_ingresos,
-              SUM(utilidad_neta) AS total_utilidad,
-              ROUND(AVG(rentabilidad_pct),2) AS rentabilidad_promedio
+              SUM(total_gastos_directos) AS total_gastos
        FROM viajes
        WHERE empresa_id = ? AND YEAR(fecha_salida) = ? AND MONTH(fecha_salida) = ?
          AND eliminado_en IS NULL`,
       [empresaId, anioAnterior, mesAnterior]
     );
+
+    // Costos mensuales fijos de TODAS las placas del mes (y del mes anterior para la variación)
+    const costosFijosDelMes = async (a, m) => {
+      try {
+        const [[cf]] = await pool.query(
+          `SELECT COALESCE(SUM(total_costos_mes), 0) AS total
+           FROM costos_vehiculo_mensual WHERE empresa_id = ? AND anio = ? AND mes = ?`,
+          [empresaId, a, m]
+        );
+        return parseFloat(cf.total || 0);
+      } catch (e) { return 0; }
+    };
+    const costosFijos    = await costosFijosDelMes(anio, mes);
+    const costosFijosAnt = await costosFijosDelMes(anioAnterior, mesAnterior);
+
+    // Fórmulas: Utilidad = Fletes − Gastos viajes − Costos mensuales todas las placas
+    const ingresos    = parseFloat(kpis.total_ingresos || 0);
+    const gastos      = parseFloat(kpis.total_gastos || 0);
+    const costosTotal = gastos + costosFijos;
+    const utilidad    = ingresos - costosTotal;
+    kpis.total_costos          = costosTotal;
+    kpis.total_utilidad        = utilidad;
+    kpis.margen_pct            = ingresos    > 0 ? parseFloat(((utilidad / ingresos) * 100).toFixed(2)) : 0;
+    kpis.rentabilidad_promedio = costosTotal > 0 ? parseFloat(((utilidad / costosTotal) * 100).toFixed(2)) : 0;
+
+    const ingresosAnt = parseFloat(kpisAnt.total_ingresos || 0);
+    const gastosAnt   = parseFloat(kpisAnt.total_gastos || 0);
+    const utilidadAnt = ingresosAnt - gastosAnt - costosFijosAnt;
+    kpisAnt.total_utilidad        = utilidadAnt;
+    kpisAnt.rentabilidad_promedio = (gastosAnt + costosFijosAnt) > 0
+      ? parseFloat(((utilidadAnt / (gastosAnt + costosFijosAnt)) * 100).toFixed(2)) : 0;
 
     const [topVehiculos] = await pool.query(
       `SELECT vh.placa, CONCAT(vh.marca,' ',vh.modelo) AS vehiculo,
