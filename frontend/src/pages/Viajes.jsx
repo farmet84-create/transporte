@@ -17,6 +17,14 @@ function useEsMobil() {
   return esMobil
 }
 
+// Fórmulas: Utilidad = Flete − Gastos directos · Rentabilidad = Utilidad / Gastos × 100
+const utilidadDe = (v) =>
+  parseFloat(v.valor_flete_cobrado || 0) - parseFloat(v.total_gastos_directos || 0)
+const rentabilidadDe = (v) => {
+  const gastos = parseFloat(v.total_gastos_directos || 0)
+  return gastos > 0 ? (utilidadDe(v) / gastos) * 100 : 0
+}
+
 export default function Viajes() {
   const [viajes, setViajes]     = useState([])
   const [total, setTotal]       = useState(0)
@@ -141,11 +149,11 @@ export default function Viajes() {
                   </div>
                   <div style={{ textAlign:'center' }}>
                     <p style={{ fontSize:10, color:'#9ca3af', margin:0 }}>Utilidad</p>
-                    <p style={{ fontSize:12, fontWeight:700, color: v.utilidad_neta>=0?'#15803d':'#dc2626', margin:'2px 0 0' }}>{formatCOP(v.utilidad_neta)}</p>
+                    <p style={{ fontSize:12, fontWeight:700, color: utilidadDe(v)>=0?'#15803d':'#dc2626', margin:'2px 0 0' }}>{formatCOP(utilidadDe(v))}</p>
                   </div>
                   <div style={{ textAlign:'center' }}>
                     <p style={{ fontSize:10, color:'#9ca3af', margin:0 }}>Rent.</p>
-                    <p style={{ fontSize:14, fontWeight:800, margin:'2px 0 0' }} className={colorRentabilidad(v.rentabilidad_pct)}>{formatPct(v.rentabilidad_pct)}</p>
+                    <p style={{ fontSize:14, fontWeight:800, margin:'2px 0 0' }} className={colorRentabilidad(rentabilidadDe(v))}>{formatPct(rentabilidadDe(v))}</p>
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
@@ -190,9 +198,9 @@ export default function Viajes() {
                       <td style={{ padding:'10px 16px', fontSize:12, color:'#6b7280' }}>{v.cliente}</td>
                       <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:500, color:'#111827' }}>{formatCOP(v.valor_flete_cobrado)}</td>
                       <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:700, color: v.saldo_manifiesto>0?'#b45309':'#15803d' }}>{formatCOP(v.saldo_manifiesto)}</td>
-                      <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:700, color: v.utilidad_neta>=0?'#15803d':'#dc2626' }}>{formatCOP(v.utilidad_neta)}</td>
+                      <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:700, color: utilidadDe(v)>=0?'#15803d':'#dc2626' }}>{formatCOP(utilidadDe(v))}</td>
                       <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:800 }}>
-                        <span className={colorRentabilidad(v.rentabilidad_pct)}>{formatPct(v.rentabilidad_pct)}</span>
+                        <span className={colorRentabilidad(rentabilidadDe(v))}>{formatPct(rentabilidadDe(v))}</span>
                       </td>
                       <td style={{ padding:'10px 16px', textAlign:'center' }}>
                         <span className={badgeEstado(v.estado)}>{labelEstado(v.estado)}</span>
