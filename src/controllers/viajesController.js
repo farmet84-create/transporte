@@ -49,7 +49,7 @@ async function listar(req, res, next) {
           v.origen, v.destino, v.estado,
           v.numero_manifiesto, v.tipo_carga, v.peso_carga_kg,
           v.valor_manifiesto, v.anticipo, v.descuento_manifiesto, v.saldo_manifiesto,
-          v.valor_flete_cobrado, v.total_ingresos, v.total_costos,
+          v.valor_flete_cobrado, v.total_ingresos, v.total_costos, v.total_gastos_directos,
           v.utilidad_bruta, v.utilidad_neta, v.rentabilidad_pct,
           v.facturado, v.creado_en,
           vh.placa, vh.marca, vh.modelo,
