@@ -244,6 +244,7 @@ export default function Dashboard() {
               { label:'Nº viajes',        valor: resumen.total_viajes,                          color:'#111827' },
               { label:'Fletes cobrados',  valor: formatCOP(resumen.total_fletes),               color:'#1d4ed8' },
               { label:'Gastos del viaje', valor: formatCOP(resumen.total_gastos),               color:'#dc2626' },
+              { label:'Costos mensuales', valor: formatCOP(resumen.total_costos_fijos),         color:'#dc2626' },
               { label:'Utilidad',         valor: formatCOP(resumen.utilidad),                   color: resumen.utilidad >= 0 ? '#15803d' : '#dc2626' },
               { label:'Margen',           valor: `${parseFloat(resumen.margen_pct||0).toFixed(1)}%`,       color:'#4f46e5' },
               { label:'Rentabilidad',     valor: `${parseFloat(resumen.rentabilidad_pct||0).toFixed(1)}%`, color:'#4f46e5' },
