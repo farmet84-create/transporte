@@ -489,6 +489,68 @@ async function recalcularGastosDirectos(viajeId) {
   );
 }
 
+// GET /api/cuentas-cobrar — saldos y cuentas por cobrar (solo admin)
+async function listarCuentasCobrar(req, res, next) {
+  try {
+    const empresaId = req.usuario.empresa_id;
+    const { cliente_id, fecha_inicio, fecha_fin } = req.query;
+
+    let where = 'WHERE v.empresa_id = ? AND v.eliminado_en IS NULL';
+    const params = [empresaId];
+    if (cliente_id)   { where += ' AND v.cliente_id = ?';    params.push(cliente_id); }
+    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?'; params.push(fecha_inicio); }
+    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?'; params.push(fecha_fin); }
+
+    const [rows] = await pool.query(
+      `SELECT v.id, v.numero_viaje,
+          DATE_FORMAT(v.fecha_salida, '%Y-%m-%d') AS fecha_salida,
+          cl.razon_social AS cliente,
+          v.numero_manifiesto, v.anticipo, v.saldo_manifiesto,
+          DATE_FORMAT(v.fecha_pago_anticipo, '%Y-%m-%d') AS fecha_pago_anticipo,
+          v.banco_anticipo,
+          DATE_FORMAT(v.fecha_pago_saldo, '%Y-%m-%d') AS fecha_pago_saldo,
+          v.banco_saldo
+       FROM viajes v
+       INNER JOIN clientes cl ON cl.id = v.cliente_id
+       ${where}
+       ORDER BY v.fecha_salida DESC, v.id DESC`,
+      params
+    );
+
+    return ok(res, rows);
+  } catch (err) { next(err); }
+}
+
+// PUT /api/cuentas-cobrar/:id — actualizar fechas de pago y bancos
+async function actualizarCuentaCobrar(req, res, next) {
+  try {
+    const { id } = req.params;
+    const empresaId = req.usuario.empresa_id;
+    const { fecha_pago_anticipo, banco_anticipo, fecha_pago_saldo, banco_saldo } = req.body;
+
+    const [rows] = await pool.query(
+      `SELECT id FROM viajes WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL`,
+      [id, empresaId]
+    );
+    if (!rows.length) return error(res, 'Viaje no encontrado', 404);
+
+    await pool.query(
+      `UPDATE viajes SET
+        fecha_pago_anticipo = ?, banco_anticipo = ?,
+        fecha_pago_saldo = ?, banco_saldo = ?,
+        actualizado_en = NOW(), actualizado_por = ?
+       WHERE id = ?`,
+      [
+        limpiarFecha(fecha_pago_anticipo), banco_anticipo || null,
+        limpiarFecha(fecha_pago_saldo), banco_saldo || null,
+        req.usuario.id, id
+      ]
+    );
+
+    return ok(res, null, 'Cuenta por cobrar actualizada');
+  } catch (err) { next(err); }
+}
+
 // GET /api/viajes/:id/rentabilidad
 async function rentabilidad(req, res, next) {
   try {
@@ -521,5 +583,6 @@ module.exports = {
   agregarGasto, eliminarGasto,
   agregarGastoPreop, eliminarGastoPreop,
   agregarCombustible, eliminarCombustible,
+  listarCuentasCobrar, actualizarCuentaCobrar,
   rentabilidad, eliminarViaje
 };
