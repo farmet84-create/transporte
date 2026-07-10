@@ -229,7 +229,12 @@ CLIENTES: ${datos.clientes?.slice(0,5).map(c=>`${c.cliente}: ${formatCOP(c.total
         })
       })
       const data = await response.json()
-      setRecomendaciones(data.choices?.[0]?.message?.content || 'No se pudieron generar recomendaciones')
+      const errorMsg = !GROQ_KEY
+        ? 'No hay clave de IA configurada (VITE_GROQ_KEY)'
+        : data.error?.message
+          ? `Error de la IA: ${data.error.message}`
+          : 'No se pudieron generar recomendaciones'
+      setRecomendaciones(data.choices?.[0]?.message?.content || errorMsg)
       setGenerado(true)
     } catch { toast.error('Error al generar recomendaciones') }
     finally { setCargando(false) }
