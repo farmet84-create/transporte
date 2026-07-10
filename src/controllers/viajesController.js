@@ -506,6 +506,7 @@ async function listarCuentasCobrar(req, res, next) {
           DATE_FORMAT(v.fecha_salida, '%Y-%m-%d') AS fecha_salida,
           cl.razon_social AS cliente,
           v.numero_manifiesto, v.anticipo, v.saldo_manifiesto,
+          v.valor_flete_cobrado, v.retenciones, v.descuento_manifiesto,
           DATE_FORMAT(v.fecha_pago_anticipo, '%Y-%m-%d') AS fecha_pago_anticipo,
           v.banco_anticipo,
           DATE_FORMAT(v.fecha_pago_saldo, '%Y-%m-%d') AS fecha_pago_saldo,
