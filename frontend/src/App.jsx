@@ -8,6 +8,7 @@ import Dashboard    from './pages/Dashboard'
 import Viajes       from './pages/Viajes'
 import NuevoViaje   from './pages/NuevoViaje'
 import DetalleViaje from './pages/DetalleViaje'
+import CuentasCobrar from './pages/CuentasCobrar'
 import Vehiculos    from './pages/Vehiculos'
 import Conductores  from './pages/Conductores'
 import Clientes     from './pages/Clientes'
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/viajes"       element={<Viajes />} />
           <Route path="/viajes/nuevo" element={<NuevoViaje />} />
           <Route path="/viajes/:id"   element={<DetalleViaje />} />
+          <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
           <Route path="/vehiculos"    element={<Vehiculos />} />
           <Route path="/conductores"  element={<Conductores />} />
           <Route path="/clientes"     element={<Clientes />} />
