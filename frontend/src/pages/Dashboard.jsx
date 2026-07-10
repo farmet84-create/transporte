@@ -279,6 +279,7 @@ export default function Dashboard() {
       {kpis && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10 }} className="md:grid-cols-4">
           {[
+            { label:'Total costos (viajes + mensuales)', valor:formatCOP(parseFloat(kpis.total_costos||0)), color:'#dc2626' },
             { label:'Viajes completados', valor:kpis.viajes_rentables||0, color:'#15803d' },
             { label:'Viajes con pérdida', valor:kpis.viajes_perdida||0, color:'#dc2626' },
             { label:'Margen promedio', color:'#4f46e5', valor: `${parseFloat(kpis.margen_pct||0).toFixed(1)}%` },
