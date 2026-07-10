@@ -164,7 +164,7 @@ export default function Viajes() {
               <table style={{ width:'100%', fontSize:13, borderCollapse:'collapse' }}>
                 <thead>
                   <tr style={{ background:'#1f2937' }}>
-                    {['Viaje / Fecha','Placa / Conductor','Ruta','Cliente','Flete','Saldo','Utilidad','Rent.','Estado',''].map((h,i) => (
+                    {['Viaje / Fecha','Placa / Conductor','Manifiesto','Cliente','Flete','Saldo','Utilidad','Rent.','Estado',''].map((h,i) => (
                       <th key={i} style={{ padding:'10px 16px', textAlign:['Flete','Utilidad','Rent.'].includes(h)?'right':h==='Estado'?'center':'left', fontSize:11, fontWeight:600, color:'#d1d5db', textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -186,7 +186,7 @@ export default function Viajes() {
                         <span style={{ fontFamily:'monospace', fontWeight:700, background:'#f3f4f6', padding:'2px 7px', borderRadius:5, fontSize:11 }}>{v.placa}</span>
                         <p style={{ fontSize:11, color:'#6b7280', margin:'3px 0 0' }}>{v.conductor}</p>
                       </td>
-                      <td style={{ padding:'10px 16px', fontSize:12, color:'#374151' }}>{v.origen} → {v.destino}</td>
+                      <td style={{ padding:'10px 16px', fontSize:12, color:'#374151', fontWeight:600 }}>{v.numero_manifiesto || '—'}</td>
                       <td style={{ padding:'10px 16px', fontSize:12, color:'#6b7280' }}>{v.cliente}</td>
                       <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:500, color:'#111827' }}>{formatCOP(v.valor_flete_cobrado)}</td>
                       <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:700, color: v.saldo_manifiesto>0?'#b45309':'#15803d' }}>{formatCOP(v.saldo_manifiesto)}</td>
