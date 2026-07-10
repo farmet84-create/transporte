@@ -279,10 +279,9 @@ export default function Dashboard() {
       {kpis && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10 }} className="md:grid-cols-4">
           {[
-            { label:'Total costos', valor:formatCOP(parseFloat(kpis.total_costos||0)), color:'#dc2626' },
             { label:'Viajes completados', valor:kpis.viajes_rentables||0, color:'#15803d' },
             { label:'Viajes con pérdida', valor:kpis.viajes_perdida||0, color:'#dc2626' },
-            { label:'Margen promedio', color:'#4f46e5', valor: parseFloat(kpis.total_ingresos||0)>0 ? `${((parseFloat(kpis.total_utilidad)/parseFloat(kpis.total_ingresos))*100).toFixed(1)}%` : '—' },
+            { label:'Margen promedio', color:'#4f46e5', valor: `${parseFloat(kpis.margen_pct||0).toFixed(1)}%` },
           ].map((k,i) => (
             <div key={i} style={{ background:'#fff', borderRadius:12, padding:'12px 16px', border:'1px solid #f1f5f9', textAlign:'center', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
               <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>{k.label}</p>
