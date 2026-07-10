@@ -123,6 +123,7 @@ export default function Dashboard() {
   const [viajes, setViajes]       = useState([])
   const [topVehiculos, setTopVehiculos] = useState([])
   const [resumenAlertas, setResumenAlertas] = useState(null)
+  const [resumen, setResumen]     = useState(null)
   const [cargando, setCargando]   = useState(true)
   const [conductores, setConductores] = useState([])
   const [clientes, setClientes]       = useState([])
@@ -135,16 +136,18 @@ export default function Dashboard() {
   const cargar = useCallback(async () => {
     setCargando(true)
     try {
-      const [resKpis, resEvol, resViajes, resTop] = await Promise.all([
+      const [resKpis, resEvol, resViajes, resTop, resResumen] = await Promise.all([
         reportesAPI.dashboard({ anio, mes }),
         reportesAPI.evolucionMensual({ anio }),
         viajesAPI.listar({ pagina:1, limite:10, ...filtros }),
         reportesAPI.porVehiculo({ anio, mes }),
+        reportesAPI.resumen(filtros),
       ])
       setKpis(resKpis.data.datos?.kpis || null)
       setEvolucion(resEvol.data.datos || [])
       setViajes(resViajes.data.datos || [])
       setTopVehiculos(resTop.data.datos || [])
+      setResumen(resResumen.data.datos || null)
     } catch { toast.error('Error cargando datos') }
     finally { setCargando(false) }
   }, [anio, mes, filtros])
@@ -223,6 +226,34 @@ export default function Dashboard() {
               <label className="label">Hasta</label>
               <input type="date" value={filtros.fecha_fin} onChange={e => setFiltros(f=>({...f, fecha_fin:e.target.value}))} className="input" style={{ fontSize:13 }} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Totales con filtros aplicados ── */}
+      {hayFiltros && resumen && (
+        <div style={{ background:'#eef2ff', borderRadius:14, padding:16, border:'2px solid #c7d2fe' }}>
+          <p style={{ fontWeight:700, fontSize:14, color:'#3730a3', margin:'0 0 12px' }}>
+            Totales del filtro aplicado
+            {filtros.placa && ` — Placa: ${filtros.placa}`}
+            {filtros.cliente_id && ` — Cliente: ${clientes.find(c => String(c.id) === String(filtros.cliente_id))?.razon_social || ''}`}
+            {(filtros.fecha_inicio || filtros.fecha_fin) && ` — ${filtros.fecha_inicio || '...'} a ${filtros.fecha_fin || 'hoy'}`}
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10 }}>
+            {[
+              { label:'Nº viajes',        valor: resumen.total_viajes,                          color:'#111827' },
+              { label:'Fletes cobrados',  valor: formatCOP(resumen.total_fletes),               color:'#1d4ed8' },
+              { label:'Gastos del viaje', valor: formatCOP(resumen.total_gastos),               color:'#dc2626' },
+              { label:'Utilidad',         valor: formatCOP(resumen.utilidad),                   color: resumen.utilidad >= 0 ? '#15803d' : '#dc2626' },
+              { label:'Margen',           valor: `${parseFloat(resumen.margen_pct||0).toFixed(1)}%`,       color:'#4f46e5' },
+              { label:'Rentabilidad',     valor: `${parseFloat(resumen.rentabilidad_pct||0).toFixed(1)}%`, color:'#4f46e5' },
+              { label:'Suma de saldos',   valor: formatCOP(resumen.total_saldos),               color:'#b45309' },
+            ].map((k,i) => (
+              <div key={i} style={{ background:'#fff', borderRadius:10, padding:'10px 12px', textAlign:'center', border:'1px solid #e0e7ff' }}>
+                <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>{k.label}</p>
+                <p style={{ fontSize:15, fontWeight:800, color:k.color, margin:'4px 0 0' }}>{k.valor}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}
