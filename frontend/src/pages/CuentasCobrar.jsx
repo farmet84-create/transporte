@@ -42,12 +42,8 @@ export default function CuentasCobrar() {
   }
 
   const hayFiltros = Object.values(filtros).some(v => v !== '')
-  // Saldo = Flete cobrado − Anticipo − Retenciones − Descuentos adicionales
-  const saldoDe = (f) =>
-    parseFloat(f.valor_flete_cobrado || 0)
-    - parseFloat(f.anticipo || 0)
-    - parseFloat(f.retenciones || 0)
-    - parseFloat(f.descuento_manifiesto || 0)
+  // Saldo = el mismo "Saldo a pagar" del viaje (Manifiesto − Retenciones − Descuentos − Anticipo)
+  const saldoDe = (f) => parseFloat(f.saldo_manifiesto || 0)
 
   const totalAnticipos = filas.reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
   const totalSaldos    = filas.reduce((s, f) => s + saldoDe(f), 0)
