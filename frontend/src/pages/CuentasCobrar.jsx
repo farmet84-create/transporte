@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+ import { useState, useEffect, useCallback } from 'react'
 import { X, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cuentasAPI, clientesAPI } from '../services/api'
@@ -45,10 +45,11 @@ export default function CuentasCobrar() {
   // Saldo = el mismo "Saldo a pagar" del viaje (Manifiesto − Retenciones − Descuentos − Anticipo)
   const saldoDe = (f) => parseFloat(f.saldo_manifiesto || 0)
 
-  const totalAnticipos = filas.reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
   const totalSaldos    = filas.reduce((s, f) => s + saldoDe(f), 0)
   // Anticipos al día: suma de anticipos de manifiestos que ya tienen fecha de pago
   const anticiposAlDia = filas.filter(f => f.fecha_pago_anticipo).reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
+  // Anticipos pendientes de pago: suma de anticipos de manifiestos sin fecha de pago
+  const anticiposPendientes = filas.filter(f => !f.fecha_pago_anticipo).reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
 
   const thStyle = { padding:'10px 12px', textAlign:'left', fontSize:11, fontWeight:600, color:'#d1d5db', textTransform:'uppercase', letterSpacing:'0.04em', whiteSpace:'nowrap' }
   const tdStyle = { padding:'8px 12px', fontSize:13, whiteSpace:'nowrap' }
@@ -102,10 +103,10 @@ export default function CuentasCobrar() {
       {/* Totales */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:10 }}>
         {[
-          { label:'Registros',        valor: filas.length,              color:'#111827' },
-          { label:'Total anticipos',  valor: formatCOP(totalAnticipos), color:'#1d4ed8' },
-          { label:'Total saldos',     valor: formatCOP(totalSaldos),    color:'#b45309' },
-          { label:'Anticipos al día', valor: formatCOP(anticiposAlDia), color:'#15803d' },
+          { label:'Registros',                  valor: filas.length,                  color:'#111827' },
+          { label:'Total saldos',               valor: formatCOP(totalSaldos),        color:'#b45309' },
+          { label:'Anticipos al día',           valor: formatCOP(anticiposAlDia),     color:'#15803d' },
+          { label:'Anticipos pendientes de pago', valor: formatCOP(anticiposPendientes), color:'#dc2626' },
         ].map((k,i) => (
           <div key={i} className="card" style={{ padding:'12px 16px', textAlign:'center' }}>
             <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>{k.label}</p>
