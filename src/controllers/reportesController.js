@@ -335,19 +335,27 @@ async function resumenFiltrado(req, res, next) {
       params
     );
 
-    // Costos mensuales fijos de las placas y meses cubiertos por los viajes filtrados
+    // Costos mensuales fijos de TODAS las placas registradas en los meses del período filtrado
+    // (no solo las placas que tuvieron viajes)
     let costosFijos = 0;
     try {
+      let cwhere = 'WHERE cvm.empresa_id = ?';
+      const cparams = [empresaId];
+      if (placa)        { cwhere += ' AND vh.placa LIKE ?'; cparams.push(`%${placa.toUpperCase()}%`); }
+      if (fecha_inicio) {
+        cwhere += " AND STR_TO_DATE(CONCAT(cvm.anio,'-',cvm.mes,'-01'),'%Y-%m-%d') >= STR_TO_DATE(CONCAT(YEAR(?),'-',MONTH(?),'-01'),'%Y-%m-%d')";
+        cparams.push(fecha_inicio, fecha_inicio);
+      }
+      if (fecha_fin) {
+        cwhere += " AND STR_TO_DATE(CONCAT(cvm.anio,'-',cvm.mes,'-01'),'%Y-%m-%d') <= ?";
+        cparams.push(fecha_fin);
+      }
       const [[cf]] = await pool.query(
         `SELECT COALESCE(SUM(cvm.total_costos_mes), 0) AS total_costos_fijos
          FROM costos_vehiculo_mensual cvm
-         INNER JOIN (
-           SELECT DISTINCT v.vehiculo_id, YEAR(v.fecha_salida) AS anio, MONTH(v.fecha_salida) AS mes
-           FROM viajes v
-           INNER JOIN vehiculos vh ON vh.id = v.vehiculo_id
-           ${where}
-         ) m ON m.vehiculo_id = cvm.vehiculo_id AND m.anio = cvm.anio AND m.mes = cvm.mes`,
-        params
+         INNER JOIN vehiculos vh ON vh.id = cvm.vehiculo_id
+         ${cwhere}`,
+        cparams
       );
       costosFijos = parseFloat(cf.total_costos_fijos || 0);
     } catch (e) { /* tabla aún no creada */ }
