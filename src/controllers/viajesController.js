@@ -493,13 +493,14 @@ async function recalcularGastosDirectos(viajeId) {
 async function listarCuentasCobrar(req, res, next) {
   try {
     const empresaId = req.usuario.empresa_id;
-    const { cliente_id, fecha_inicio, fecha_fin } = req.query;
+    const { cliente_id, fecha_inicio, fecha_fin, manifiesto } = req.query;
 
     let where = 'WHERE v.empresa_id = ? AND v.eliminado_en IS NULL';
     const params = [empresaId];
-    if (cliente_id)   { where += ' AND v.cliente_id = ?';    params.push(cliente_id); }
-    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?'; params.push(fecha_inicio); }
-    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?'; params.push(fecha_fin); }
+    if (cliente_id)   { where += ' AND v.cliente_id = ?';           params.push(cliente_id); }
+    if (fecha_inicio) { where += ' AND v.fecha_salida >= ?';        params.push(fecha_inicio); }
+    if (fecha_fin)    { where += ' AND v.fecha_salida <= ?';        params.push(fecha_fin); }
+    if (manifiesto)   { where += ' AND v.numero_manifiesto LIKE ?'; params.push(`%${manifiesto}%`); }
 
     const [rows] = await pool.query(
       `SELECT v.id, v.numero_viaje,
