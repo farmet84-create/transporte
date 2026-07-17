@@ -8,7 +8,7 @@ export default function CuentasCobrar() {
   const [filas, setFilas]         = useState([])
   const [clientes, setClientes]   = useState([])
   const [cargando, setCargando]   = useState(true)
-  const [filtros, setFiltros]     = useState({ cliente_id:'', fecha_inicio:'', fecha_fin:'' })
+  const [filtros, setFiltros]     = useState({ cliente_id:'', fecha_inicio:'', fecha_fin:'', manifiesto:'' })
 
   useEffect(() => {
     clientesAPI.listar({ limite:100 }).then(r => setClientes(r.data.datos||[])).catch(()=>{})
@@ -47,6 +47,8 @@ export default function CuentasCobrar() {
 
   const totalAnticipos = filas.reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
   const totalSaldos    = filas.reduce((s, f) => s + saldoDe(f), 0)
+  // Anticipos al día: suma de anticipos de manifiestos que ya tienen fecha de pago
+  const anticiposAlDia = filas.filter(f => f.fecha_pago_anticipo).reduce((s, f) => s + parseFloat(f.anticipo || 0), 0)
 
   const thStyle = { padding:'10px 12px', textAlign:'left', fontSize:11, fontWeight:600, color:'#d1d5db', textTransform:'uppercase', letterSpacing:'0.04em', whiteSpace:'nowrap' }
   const tdStyle = { padding:'8px 12px', fontSize:13, whiteSpace:'nowrap' }
@@ -68,7 +70,7 @@ export default function CuentasCobrar() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
           <p style={{ fontWeight:600, fontSize:14, color:'#111827', margin:0 }}>Filtros</p>
           {hayFiltros && (
-            <button onClick={() => setFiltros({ cliente_id:'', fecha_inicio:'', fecha_fin:'' })}
+            <button onClick={() => setFiltros({ cliente_id:'', fecha_inicio:'', fecha_fin:'', manifiesto:'' })}
               style={{ fontSize:12, color:'#dc2626', background:'transparent', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
               <X style={{ width:12, height:12 }} /> Limpiar
             </button>
@@ -90,15 +92,20 @@ export default function CuentasCobrar() {
             <label className="label">Hasta</label>
             <input type="date" value={filtros.fecha_fin} onChange={e => setFiltros(f=>({...f, fecha_fin:e.target.value}))} className="input" style={{ fontSize:13 }} />
           </div>
+          <div>
+            <label className="label">N° Manifiesto</label>
+            <input value={filtros.manifiesto} onChange={e => setFiltros(f=>({...f, manifiesto:e.target.value}))} placeholder="Ej: 63965" className="input" style={{ fontSize:13 }} />
+          </div>
         </div>
       </div>
 
       {/* Totales */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:10 }}>
         {[
-          { label:'Registros',       valor: filas.length,             color:'#111827' },
-          { label:'Total anticipos', valor: formatCOP(totalAnticipos), color:'#1d4ed8' },
-          { label:'Total saldos',    valor: formatCOP(totalSaldos),    color:'#b45309' },
+          { label:'Registros',        valor: filas.length,              color:'#111827' },
+          { label:'Total anticipos',  valor: formatCOP(totalAnticipos), color:'#1d4ed8' },
+          { label:'Total saldos',     valor: formatCOP(totalSaldos),    color:'#b45309' },
+          { label:'Anticipos al día', valor: formatCOP(anticiposAlDia), color:'#15803d' },
         ].map((k,i) => (
           <div key={i} className="card" style={{ padding:'12px 16px', textAlign:'center' }}>
             <p style={{ fontSize:11, color:'#6b7280', margin:0 }}>{k.label}</p>
@@ -122,10 +129,8 @@ export default function CuentasCobrar() {
                   <th style={thStyle}>N° Manifiesto</th>
                   <th style={{ ...thStyle, textAlign:'right' }}>Anticipo</th>
                   <th style={thStyle}>Fecha pago</th>
-                  <th style={thStyle}>Banco</th>
                   <th style={{ ...thStyle, textAlign:'right' }}>Saldo</th>
                   <th style={thStyle}>Fecha pago</th>
-                  <th style={thStyle}>Banco</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,24 +154,12 @@ export default function CuentasCobrar() {
                         onBlur={() => guardarFila(filas.find(x => x.id === f.id))}
                         className="input" style={{ fontSize:12, width:140, padding:'4px 8px' }} />
                     </td>
-                    <td style={tdStyle}>
-                      <input value={f.banco_anticipo || ''} placeholder="Banco"
-                        onChange={e => setCampo(f.id, 'banco_anticipo', e.target.value)}
-                        onBlur={() => guardarFila(filas.find(x => x.id === f.id))}
-                        className="input" style={{ fontSize:12, width:130, padding:'4px 8px' }} />
-                    </td>
                     <td style={{ ...tdStyle, textAlign:'right', fontWeight:700, color: saldoDe(f) >= 0 ? '#15803d' : '#dc2626' }}>{formatCOP(saldoDe(f))}</td>
                     <td style={tdStyle}>
                       <input type="date" value={f.fecha_pago_saldo || ''}
                         onChange={e => setCampo(f.id, 'fecha_pago_saldo', e.target.value)}
                         onBlur={() => guardarFila(filas.find(x => x.id === f.id))}
                         className="input" style={{ fontSize:12, width:140, padding:'4px 8px' }} />
-                    </td>
-                    <td style={tdStyle}>
-                      <input value={f.banco_saldo || ''} placeholder="Banco"
-                        onChange={e => setCampo(f.id, 'banco_saldo', e.target.value)}
-                        onBlur={() => guardarFila(filas.find(x => x.id === f.id))}
-                        className="input" style={{ fontSize:12, width:130, padding:'4px 8px' }} />
                     </td>
                   </tr>
                 ))}
