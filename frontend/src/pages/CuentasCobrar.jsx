@@ -1,4 +1,4 @@
- import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { X, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cuentasAPI, clientesAPI } from '../services/api'
