@@ -55,6 +55,30 @@ async function obtenerAlertas(empresaId) {
     }
   }
 
+  // ─── MANTENIMIENTO (semáforo) ────────────────────────────
+  try {
+    const [mant] = await pool.query(
+      `SELECT m.semaforo, m.pendientes, m.proximo_mant_fecha, m.proximo_mant_km,
+              v.placa, v.marca, v.modelo
+       FROM mantenimiento_vehiculo m
+       INNER JOIN vehiculos v ON v.id = m.vehiculo_id
+       WHERE m.empresa_id = ? AND v.activo = 1 AND v.eliminado_en IS NULL
+         AND m.semaforo IN ('rojo','amarillo')`,
+      [empresaId]
+    );
+    for (const m of mant) {
+      const nombre = `${m.placa} — ${m.marca} ${m.modelo}`
+      const detalle = m.pendientes ? m.pendientes : 'Próximo mantenimiento pendiente'
+      alertas.push({
+        tipo: m.semaforo === 'rojo' ? 'danger' : 'warning',
+        categoria: 'vehiculo', icono: '🔧',
+        titulo: m.semaforo === 'rojo' ? 'Mantenimiento URGENTE' : 'Mantenimiento próximo',
+        descripcion: `${nombre} — ${detalle}`,
+        placa: m.placa,
+      })
+    }
+  } catch (e) { /* tabla aún no creada */ }
+
   // ─── CONDUCTORES ─────────────────────────────────────────
   const [conductores] = await pool.query(
     `SELECT id, nombres, apellidos, numero_licencia, vencimiento_licencia
