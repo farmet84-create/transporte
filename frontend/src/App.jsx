@@ -10,6 +10,7 @@ import NuevoViaje   from './pages/NuevoViaje'
 import DetalleViaje from './pages/DetalleViaje'
 import CuentasCobrar from './pages/CuentasCobrar'
 import Mantenimiento from './pages/Mantenimiento'
+import Ayuda from './pages/Ayuda'
 import Vehiculos    from './pages/Vehiculos'
 import Conductores  from './pages/Conductores'
 import Clientes     from './pages/Clientes'
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
           <Route path="/vehiculos"    element={<Vehiculos />} />
           <Route path="/mantenimiento" element={<Mantenimiento />} />
+          <Route path="/ayuda"        element={<Ayuda />} />
           <Route path="/conductores"  element={<Conductores />} />
           <Route path="/clientes"     element={<Clientes />} />
           <Route path="/costos"       element={<Costos />} />
