@@ -10,6 +10,7 @@ const costos      = require('../controllers/costosController');
 const reportes    = require('../controllers/reportesController');
 const admin       = require('../controllers/adminController');
 const alertas     = require('../controllers/alertasController');
+const mantenimiento = require('../controllers/mantenimientoController');
 const suscripcion = require('../controllers/suscripcionController');
 const { verificarSuscripcion } = require('../middlewares/verificarSuscripcion');
 const { pool }    = require('../config/database');
@@ -212,6 +213,8 @@ router.delete('/viajes/:id/gastos-preop/:gastoId',   autenticar, autorizar('admi
 router.post  ('/viajes/:id/combustible',       autenticar, autorizar('admin','operador'), viajes.agregarCombustible);
 router.delete('/viajes/:id/combustible/:cId',  autenticar, autorizar('admin','operador'), viajes.eliminarCombustible);
 router.delete('/viajes/:id',                   autenticar, autorizar('admin','operador'), viajes.eliminarViaje);
+router.get   ('/mantenimiento',                autenticar, mantenimiento.listar);
+router.post  ('/mantenimiento',                autenticar, autorizar('admin','operador'), mantenimiento.guardar);
 router.get   ('/cuentas-cobrar',               autenticar, autorizar('admin'), viajes.listarCuentasCobrar);
 router.put   ('/cuentas-cobrar/:id',           autenticar, autorizar('admin'), viajes.actualizarCuentaCobrar);
 
