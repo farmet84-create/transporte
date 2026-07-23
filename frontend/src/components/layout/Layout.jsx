@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Truck, Users, UserCheck,
-  FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell, Sun, Moon, CreditCard, Wallet
+  FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell, Sun, Moon, CreditCard, Wallet, Wrench
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import api, { suscripcionAPI } from '../../services/api'
@@ -62,6 +62,7 @@ export default function Layout() {
     { to: '/viajes',      icon: FileText,         label: 'Viajes' },
     ...(usuario?.rol === 'admin' ? [{ to: '/cuentas-cobrar', icon: Wallet, label: 'Saldos y cuentas por cobrar' }] : []),
     { to: '/vehiculos',   icon: Truck,            label: 'Vehículos' },
+    { to: '/mantenimiento', icon: Wrench,         label: 'Mantenimiento' },
     { to: '/conductores', icon: UserCheck,        label: 'Conductores' },
     { to: '/clientes',    icon: Users,            label: 'Clientes' },
     { to: '/costos',      icon: DollarSign,       label: 'Costos mensuales' },
