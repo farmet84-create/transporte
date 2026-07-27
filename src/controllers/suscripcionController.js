@@ -24,7 +24,7 @@ async function obtenerEstado(req, res, next) {
     );
 
     if (!rows.length) {
-      return ok(res, { estado: 'sin_suscripcion', dias_restantes: 0, precio_usd: 395.00 });
+      return ok(res, { estado: 'sin_suscripcion', dias_restantes: 0, precio_usd: 420.00 });
     }
 
     return ok(res, rows[0]);
@@ -51,7 +51,7 @@ async function generarPago(req, res, next) {
           id: `suscripcion-${empresaId}`,
           title: 'Suscripción mensual — Sistema de Transporte',
           quantity: 1,
-          unit_price: 395,
+          unit_price: 420,
           currency_id: 'USD',
         }],
         back_urls: {
@@ -156,7 +156,7 @@ async function webhook(req, res, next) {
     await pool.query(
       `INSERT INTO suscripcion_pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta)
        VALUES (?, ?, ?, ?, 'aprobado', NOW(), ?, ?)`,
-      [nuevoUuid(), empresaId, String(data.id), pago.transaction_amount || 395, periodoDesde, periodoHasta]
+      [nuevoUuid(), empresaId, String(data.id), pago.transaction_amount || 420, periodoDesde, periodoHasta]
     );
 
     // Renovar/activar suscripción
@@ -179,7 +179,7 @@ async function webhook(req, res, next) {
     } else {
       await pool.query(
         `INSERT INTO suscripciones (uuid, empresa_id, estado, precio_usd, fecha_inicio, fecha_vencimiento)
-         VALUES (?, ?, 'activo', 395.00, ?, ?)`,
+         VALUES (?, ?, 'activo', 420.00, ?, ?)`,
         [nuevoUuid(), empresaId, periodoDesde, periodoHasta]
       );
     }
