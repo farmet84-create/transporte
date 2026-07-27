@@ -37,6 +37,7 @@ export default function BloqueoSuscripcion() {
         }}>
           <Lock style={{ width: 32, height: 32, color: '#ef4444' }} />
         </div>
+
         <h2 style={{ color: '#ffffff', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
           Suscripción vencida
         </h2>
@@ -44,14 +45,16 @@ export default function BloqueoSuscripcion() {
           Tu acceso ha sido suspendido por falta de pago.<br />
           Realiza el pago para recuperar el acceso de inmediato.
         </p>
+
         <div style={{
           background: 'rgba(255,255,255,0.05)', borderRadius: 12,
           padding: 16, marginBottom: 24,
           border: '1px solid rgba(255,255,255,0.08)',
         }}>
           <p style={{ color: '#6b7280', fontSize: 12, margin: '0 0 4px' }}>Suscripción mensual</p>
-          <p style={{ color: '#ffffff', fontSize: 28, fontWeight: 900, margin: 0 }}>$395 USD</p>
+          <p style={{ color: '#ffffff', fontSize: 28, fontWeight: 900, margin: 0 }}>$420 USD</p>
         </div>
+
         <button
           onClick={handlePagar}
           disabled={cargando}
@@ -66,6 +69,7 @@ export default function BloqueoSuscripcion() {
           <CreditCard style={{ width: 20, height: 20 }} />
           {cargando ? 'Redirigiendo...' : 'Pagar con MercadoPago'}
         </button>
+
         <p style={{ color: '#4b5563', fontSize: 11, marginTop: 16 }}>
           Pago seguro procesado por MercadoPago
         </p>
