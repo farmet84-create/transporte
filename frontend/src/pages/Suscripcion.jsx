@@ -100,13 +100,15 @@ export default function Suscripcion() {
   </div>
 </div>
 
-<div style="margin-bottom:24px;">
-  <div class="section">
+<div style="display:flex;gap:48px;margin-bottom:40px;">
+  <div class="section" style="flex:1"></div>
+  <div class="section" style="flex:1">
     <h3>Estado del pago</h3>
     <p><span class="badge">✓ Aprobado</span></p>
     <p style="margin-top:8px;font-size:13px;color:#6b7280;">ID MercadoPago: ${p.mp_payment_id || '—'}</p>
   </div>
 </div>
+
 
 <table class="table">
   <thead>
@@ -122,11 +124,11 @@ export default function Suscripcion() {
       <td><strong>Suscripción mensual</strong><br/><span style="font-size:12px;color:#6b7280;">Sistema de Rentabilidad de Transporte</span></td>
       <td>${formatFecha(p.periodo_desde)} — ${formatFecha(p.periodo_hasta)}</td>
       <td class="right">1</td>
-      <td class="right"><strong>$395.00 USD</strong></td>
+      <td class="right"><strong>$420.00 USD</strong></td>
     </tr>
     <tr class="total-row">
       <td colspan="3" class="right">Total</td>
-      <td class="right">$395.00 USD</td>
+      <td class="right">$420.00 USD</td>
     </tr>
   </tbody>
 </table>
@@ -192,7 +194,7 @@ export default function Suscripcion() {
             <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
               <div>
                 <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>Precio mensual</p>
-                <p style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '2px 0 0' }}>$395 USD</p>
+                <p style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '2px 0 0' }}>$420 USD</p>
               </div>
               {estado?.fecha_vencimiento && (
                 <div>
@@ -230,7 +232,7 @@ export default function Suscripcion() {
                   <tr key={p.id} style={{ borderBottom: '1px solid #f9fafb' }}>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.fecha_pago)}</td>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.periodo_desde)} — {formatFecha(p.periodo_hasta)}</td>
-                    <td style={{ padding: '12px', fontWeight: 700, color: '#111827' }}>$395.00 USD</td>
+                    <td style={{ padding: '12px', fontWeight: 700, color: '#111827' }}>$420.00 USD</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: p.estado === 'aprobado' ? '#f0fdf4' : '#fef2f2', color: p.estado === 'aprobado' ? '#15803d' : '#dc2626' }}>
                         {p.estado === 'aprobado' ? 'Aprobado' : p.estado}
