@@ -156,7 +156,7 @@ async function webhook(req, res, next) {
     await pool.query(
       `INSERT INTO suscripcion_pagos (uuid, empresa_id, mp_payment_id, monto_usd, estado, fecha_pago, periodo_desde, periodo_hasta)
        VALUES (?, ?, ?, ?, 'aprobado', NOW(), ?, ?)`,
-      [nuevoUuid(), empresaId, String(data.id), pago.transaction_amount || 420, periodoDesde, periodoHasta]
+      [nuevoUuid(), empresaId, String(data.id), 420.00, periodoDesde, periodoHasta]
     );
 
     // Renovar/activar suscripción
