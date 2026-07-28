@@ -124,11 +124,11 @@ export default function Suscripcion() {
       <td><strong>Suscripción mensual</strong><br/><span style="font-size:12px;color:#6b7280;">Sistema de Rentabilidad de Transporte</span></td>
       <td>${formatFecha(p.periodo_desde)} — ${formatFecha(p.periodo_hasta)}</td>
       <td class="right">1</td>
-      <td class="right"><strong>$420.00 USD</strong></td>
+      <td class="right"><strong>$${parseFloat(p.monto_usd || 0).toFixed(2)} USD</strong></td>
     </tr>
     <tr class="total-row">
       <td colspan="3" class="right">Total</td>
-      <td class="right">$420.00 USD</td>
+      <td class="right">$${parseFloat(p.monto_usd || 0).toFixed(2)} USD</td>
     </tr>
   </tbody>
 </table>
@@ -232,7 +232,7 @@ export default function Suscripcion() {
                   <tr key={p.id} style={{ borderBottom: '1px solid #f9fafb' }}>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.fecha_pago)}</td>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.periodo_desde)} — {formatFecha(p.periodo_hasta)}</td>
-                    <td style={{ padding: '12px', fontWeight: 700, color: '#111827' }}>$420.00 USD</td>
+                    <td style={{ padding: '12px', fontWeight: 700, color: '#111827' }}>{`$${parseFloat(p.monto_usd || 0).toFixed(2)} USD`}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: p.estado === 'aprobado' ? '#f0fdf4' : '#fef2f2', color: p.estado === 'aprobado' ? '#15803d' : '#dc2626' }}>
                         {p.estado === 'aprobado' ? 'Aprobado' : p.estado}
