@@ -11,6 +11,7 @@ import DetalleViaje from './pages/DetalleViaje'
 import CuentasCobrar from './pages/CuentasCobrar'
 import Mantenimiento from './pages/Mantenimiento'
 import Ayuda from './pages/Ayuda'
+import Conciliacion from './pages/Conciliacion'
 import Vehiculos    from './pages/Vehiculos'
 import Conductores  from './pages/Conductores'
 import Clientes     from './pages/Clientes'
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/viajes/nuevo" element={<NuevoViaje />} />
           <Route path="/viajes/:id"   element={<DetalleViaje />} />
           <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
+          <Route path="/conciliacion"  element={<Conciliacion />} />
           <Route path="/vehiculos"    element={<Vehiculos />} />
           <Route path="/mantenimiento" element={<Mantenimiento />} />
           <Route path="/ayuda"        element={<Ayuda />} />
