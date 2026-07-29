@@ -77,6 +77,14 @@ export const viajesAPI = {
   eliminarCombustible:(id, cId)     => api.delete(`/viajes/${id}/combustible/${cId}`),
 }
 
+export const conciliacionAPI = {
+  listar:     (params)   => api.get('/conciliacion', { params }),
+  resumen:    (params)   => api.get('/conciliacion/resumen', { params }),
+  crear:      (data)     => api.post('/conciliacion', data),
+  actualizar: (id, data) => api.put(`/conciliacion/${id}`, data),
+  eliminar:   (id)       => api.delete(`/conciliacion/${id}`),
+}
+
 export const mantenimientoAPI = {
   listar:  (params) => api.get('/mantenimiento', { params }),
   guardar: (data)   => api.post('/mantenimiento', data),
