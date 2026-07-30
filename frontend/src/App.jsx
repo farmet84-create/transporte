@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import useAuthStore from './store/authStore'
 import Layout       from './components/layout/Layout'
 import Login        from './pages/Login'
+import SSO          from './pages/SSO'
 import Dashboard    from './pages/Dashboard'
 import Viajes       from './pages/Viajes'
 import NuevoViaje   from './pages/NuevoViaje'
@@ -45,6 +46,7 @@ export default function App() {
       {bloqueo && <BloqueoSuscripcion detalle={bloqueo} />}
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/sso"   element={<SSO />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<Privada><Layout /></Privada>}>
           <Route path="/dashboard"    element={<Dashboard />} />
