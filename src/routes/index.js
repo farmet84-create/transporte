@@ -249,6 +249,7 @@ router.get('/alertas', autenticar, alertas.listar);
 router.get ('/admin/usuarios',     autenticar, autorizar('admin'), admin.listarUsuarios);
 router.post('/admin/usuarios',     autenticar, autorizar('admin'), admin.crearUsuario);
 router.put ('/admin/usuarios/:id', autenticar, autorizar('admin'), admin.actualizarUsuario);
+router.delete('/admin/usuarios/:id', autenticar, autorizar('admin'), admin.eliminarUsuario);
 router.get ('/admin/auditoria',    autenticar, autorizar('admin'), admin.listarAuditoria);
 
 // ─── SUSCRIPCIÓN ─────────────────────────────────────────
