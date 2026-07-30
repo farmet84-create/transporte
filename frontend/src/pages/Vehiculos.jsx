@@ -56,15 +56,16 @@ function Modal({ titulo, onClose, children }) {
   )
 }
 
+const Field = ({ label, children }) => (
+  <div>
+    <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:4 }}>{label}</label>
+    {children}
+  </div>
+)
+
 function FormVehiculo({ inicial, onGuardar, onCancelar, cargando }) {
   const [form, setForm] = useState(inicial || FORM_INICIAL)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const Field = ({ label, children }) => (
-    <div>
-      <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:4 }}>{label}</label>
-      {children}
-    </div>
-  )
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
       <div>
