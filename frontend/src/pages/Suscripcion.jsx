@@ -121,7 +121,7 @@ export default function Suscripcion() {
   </thead>
   <tbody>
     <tr>
-      <td><strong>Suscripción mensual</strong><br/><span style="font-size:12px;color:#6b7280;">Sistema de Rentabilidad de Transporte</span></td>
+      <td><strong>${p.concepto || 'Suscripción mensual'}</strong><br/><span style="font-size:12px;color:#6b7280;">Sistema de Rentabilidad de Transporte</span></td>
       <td>${formatFecha(p.periodo_desde)} — ${formatFecha(p.periodo_hasta)}</td>
       <td class="right">1</td>
       <td class="right"><strong>$${parseFloat(p.monto_usd || 0).toFixed(2)} USD</strong></td>
@@ -222,7 +222,7 @@ export default function Suscripcion() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #f3f4f6' }}>
-                  {['Fecha', 'Periodo', 'Monto', 'Estado', ''].map((h, i) => (
+                  {['Fecha', 'Concepto', 'Periodo', 'Monto', 'Estado', ''].map((h, i) => (
                     <th key={i} style={{ textAlign: 'left', padding: '8px 12px', color: '#6b7280', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -231,6 +231,7 @@ export default function Suscripcion() {
                 {pagos.map(p => (
                   <tr key={p.id} style={{ borderBottom: '1px solid #f9fafb' }}>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.fecha_pago)}</td>
+                    <td style={{ padding: '12px', color: '#374151' }}>{p.concepto || 'Suscripción mensual'}</td>
                     <td style={{ padding: '12px', color: '#374151' }}>{formatFecha(p.periodo_desde)} — {formatFecha(p.periodo_hasta)}</td>
                     <td style={{ padding: '12px', fontWeight: 700, color: '#111827' }}>{`$${parseFloat(p.monto_usd || 0).toFixed(2)} USD`}</td>
                     <td style={{ padding: '12px' }}>
