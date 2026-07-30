@@ -86,6 +86,71 @@ async function login(req, res, next) {
   }
 }
 
+// POST /api/auth/sso-generar — genera un token de un solo uso para cambiar al otro sistema
+async function ssoGenerar(req, res, next) {
+  try {
+    if (req.usuario.rol !== 'admin') return error(res, 'Solo administradores', 403);
+    if (!process.env.SSO_SHARED_SECRET) return error(res, 'SSO no configurado', 500);
+
+    const payload = { email: req.usuario.email, purpose: 'sso' };
+    const token = jwt.sign(payload, process.env.SSO_SHARED_SECRET, { expiresIn: '60s' });
+
+    return ok(res, { token });
+  } catch (err) { next(err); }
+}
+
+// POST /api/auth/sso-consumir — canjea el token del otro sistema por una sesión local
+async function ssoConsumir(req, res, next) {
+  try {
+    const { token: ssoToken } = req.body;
+    if (!ssoToken) return error(res, 'Token requerido', 400);
+    if (!process.env.SSO_SHARED_SECRET) return error(res, 'SSO no configurado', 500);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(ssoToken, process.env.SSO_SHARED_SECRET);
+    } catch (e) {
+      return error(res, 'Token de acceso inválido o expirado', 401);
+    }
+    if (decoded.purpose !== 'sso' || !decoded.email) return error(res, 'Token inválido', 401);
+
+    const [rows] = await pool.query(
+      `SELECT u.id, u.uuid, u.nombre, u.apellido, u.email, u.rol, u.activo, u.empresa_id,
+              e.nombre AS empresa_nombre, e.activo AS empresa_activa
+       FROM usuarios u
+       INNER JOIN empresas e ON e.id = u.empresa_id
+       WHERE u.email = ? AND u.rol = 'admin' AND u.eliminado_en IS NULL
+       LIMIT 1`,
+      [decoded.email.toLowerCase().trim()]
+    );
+
+    if (!rows.length || !rows[0].activo || !rows[0].empresa_activa) {
+      return error(res, 'No existe un administrador con ese correo en este sistema', 403);
+    }
+
+    const usuario = rows[0];
+    const payload = {
+      id: usuario.id, uuid: usuario.uuid, empresa_id: usuario.empresa_id,
+      rol: usuario.rol, email: usuario.email,
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '8h'
+    });
+
+    await pool.query(`UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?`, [usuario.id]);
+    logger.info('Login por SSO exitoso', { email: usuario.email, empresa_id: usuario.empresa_id });
+
+    return ok(res, {
+      token,
+      usuario: {
+        id: usuario.id, nombre: `${usuario.nombre} ${usuario.apellido}`,
+        email: usuario.email, rol: usuario.rol,
+        empresa_id: usuario.empresa_id, empresa_nombre: usuario.empresa_nombre,
+      }
+    }, 'Login exitoso');
+  } catch (err) { next(err); }
+}
+
 // POST /api/auth/cambiar-password
 async function cambiarPassword(req, res, next) {
   try {
@@ -133,4 +198,4 @@ async function perfil(req, res, next) {
   }
 }
 
-module.exports = { login, cambiarPassword, perfil };
+module.exports = { login, cambiarPassword, perfil, ssoGenerar, ssoConsumir };
