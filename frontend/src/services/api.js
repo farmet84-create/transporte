@@ -32,8 +32,10 @@ api.interceptors.response.use(
 )
 
 export const authAPI = {
-  login:  (data) => api.post('/auth/login', data),
-  perfil: ()     => api.get('/auth/me'),
+  login:      (data) => api.post('/auth/login', data),
+  perfil:     ()     => api.get('/auth/me'),
+  ssoGenerar: ()     => api.post('/auth/sso-generar'),
+  ssoConsumir:(token) => api.post('/auth/sso-consumir', { token }),
 }
 
 export const vehiculosAPI = {
