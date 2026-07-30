@@ -96,6 +96,31 @@ async function actualizarUsuario(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// DELETE /api/admin/usuarios/:id — solo superadministrador
+async function eliminarUsuario(req, res, next) {
+  try {
+    const { id } = req.params;
+    const empresaId = req.usuario.empresa_id;
+
+    if (parseInt(id) === req.usuario.id) {
+      return error(res, 'No puedes eliminar tu propio usuario', 400);
+    }
+
+    const [rows] = await pool.query(
+      'SELECT id FROM usuarios WHERE id = ? AND empresa_id = ? AND eliminado_en IS NULL',
+      [id, empresaId]
+    );
+    if (!rows.length) return error(res, 'Usuario no encontrado', 404);
+
+    await pool.query(
+      `UPDATE usuarios SET eliminado_en = NOW(), activo = 0 WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
+    );
+
+    return ok(res, null, 'Usuario eliminado');
+  } catch (err) { next(err); }
+}
+
 // GET /api/admin/auditoria
 async function listarAuditoria(req, res, next) {
   try {
@@ -139,4 +164,4 @@ async function listarAuditoria(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listarUsuarios, crearUsuario, actualizarUsuario, listarAuditoria };
+module.exports = { listarUsuarios, crearUsuario, actualizarUsuario, eliminarUsuario, listarAuditoria };
