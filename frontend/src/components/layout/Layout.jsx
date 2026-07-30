@@ -5,7 +5,46 @@ import {
   FileText, BarChart2, LogOut, Menu, DollarSign, Settings, Bell, Sun, Moon, CreditCard, Wallet, Wrench, HelpCircle, Landmark
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
-import api, { suscripcionAPI } from '../../services/api'
+import api, { suscripcionAPI, authAPI } from '../../services/api'
+import toast from 'react-hot-toast'
+
+const OTRO_SISTEMA_NOMBRE = 'Mayorista'
+const OTRO_SISTEMA_URL = 'https://mayorista.waappbusiness.com'
+
+function BarraCambiarSistema({ usuario }) {
+  const [cambiando, setCambiando] = useState(false)
+  if (usuario?.rol !== 'admin') return null
+
+  const cambiar = async () => {
+    setCambiando(true)
+    try {
+      const res = await authAPI.ssoGenerar()
+      const { token } = res.data.datos
+      window.location.href = `${OTRO_SISTEMA_URL}/sso?token=${token}`
+    } catch {
+      toast.error('No se pudo cambiar de sistema')
+      setCambiando(false)
+    }
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '8px 16px', backgroundColor: '#eef2ff', borderBottom: '1px solid #e0e7ff',
+      flexShrink: 0, gap: 10, flexWrap: 'wrap',
+    }}>
+      <span style={{ fontSize: 13, color: '#4338ca', fontWeight: 500 }}>
+        Usted está en el panel de <strong>Transporte</strong>
+      </span>
+      <button onClick={cambiar} disabled={cambiando} style={{
+        fontSize: 12, fontWeight: 700, color: '#fff', background: '#4f46e5',
+        border: 'none', borderRadius: 8, padding: '6px 14px', cursor: cambiando ? 'wait' : 'pointer',
+      }}>
+        {cambiando ? 'Cambiando...' : `Cambiar a ${OTRO_SISTEMA_NOMBRE} →`}
+      </button>
+    </div>
+  )
+}
 
 export default function Layout() {
   const { usuario, logout } = useAuthStore()
@@ -231,6 +270,7 @@ export default function Layout() {
             </div>
           </div>
         </header>
+        <BarraCambiarSistema usuario={usuario} />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>
