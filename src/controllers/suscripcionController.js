@@ -87,7 +87,8 @@ async function listarPagos(req, res, next) {
 
     const [rows] = await pool.query(
       `SELECT id, mp_payment_id, monto_usd, estado, fecha_pago,
-              periodo_desde, periodo_hasta, creado_en
+              periodo_desde, periodo_hasta, creado_en,
+              COALESCE(concepto, 'Suscripción mensual') AS concepto
        FROM suscripcion_pagos
        WHERE empresa_id = ?
        ORDER BY creado_en DESC
