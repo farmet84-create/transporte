@@ -3,6 +3,7 @@ import { Users, Shield, Activity, Plus, Edit2, Trash2, X, Save, Eye, EyeOff, Che
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import { formatFecha, formatHora } from '../utils/format'
+import useAuthStore from '../store/authStore'
 
 const ROLES = [
   { value: 'admin',        label: 'Administrador',  color: 'bg-purple-100 text-purple-700', desc: 'Acceso total al sistema' },
@@ -46,6 +47,8 @@ function Modal({ titulo, onClose, children }) {
 
 // ─── USUARIOS ──────────────────────────────────────────────
 function TabUsuarios() {
+  const { usuario: usuarioActual } = useAuthStore()
+  const esAdmin = usuarioActual?.rol === 'admin'
   const [usuarios, setUsuarios]   = useState([])
   const [cargando, setCargando]   = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -90,6 +93,17 @@ function TabUsuarios() {
       toast.success(u.activo ? 'Usuario desactivado' : 'Usuario activado')
       cargar()
     } catch { toast.error('Error al actualizar') }
+  }
+
+  const eliminarUsuario = async (u) => {
+    if (!confirm(`¿Eliminar definitivamente a ${u.nombre} ${u.apellido}?`)) return
+    try {
+      await api.delete(`/admin/usuarios/${u.id}`)
+      toast.success('Usuario eliminado')
+      cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.mensaje || 'Error al eliminar')
+    }
   }
 
   const abrirEditar = (u) => {
@@ -157,10 +171,18 @@ function TabUsuarios() {
                     {u.ultimo_acceso ? `${formatFecha(u.ultimo_acceso)} ${formatHora(u.ultimo_acceso)}` : 'Nunca'}
                   </td>
                   <td className="px-5 py-3">
-                    <button onClick={() => abrirEditar(u)}
-                      className="p-1.5 rounded-lg hover:bg-primary-50 text-primary-600">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => abrirEditar(u)}
+                        className="p-1.5 rounded-lg hover:bg-primary-50 text-primary-600">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      {esAdmin && (
+                        <button onClick={() => eliminarUsuario(u)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
