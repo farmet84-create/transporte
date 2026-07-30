@@ -6,6 +6,12 @@ const { pool }   = require('../config/database');
 const { ok, error, registrarAuditoria } = require('../utils/helpers');
 const logger = require('../config/logger');
 
+// ¿Es superadministrador? (puede cambiar entre sistemas y eliminar usuarios)
+function esSuperAdmin(email) {
+  const lista = (process.env.SUPER_ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  return lista.includes((email || '').toLowerCase());
+}
+
 // POST /api/auth/login
 async function login(req, res, next) {
   try {
@@ -78,6 +84,7 @@ async function login(req, res, next) {
         rol:            usuario.rol,
         empresa_id:     usuario.empresa_id,
         empresa_nombre: usuario.empresa_nombre,
+        super_admin:    esSuperAdmin(usuario.email),
       }
     }, 'Login exitoso');
 
@@ -146,6 +153,7 @@ async function ssoConsumir(req, res, next) {
         id: usuario.id, nombre: `${usuario.nombre} ${usuario.apellido}`,
         email: usuario.email, rol: usuario.rol,
         empresa_id: usuario.empresa_id, empresa_nombre: usuario.empresa_nombre,
+        super_admin: esSuperAdmin(usuario.email),
       }
     }, 'Login exitoso');
   } catch (err) { next(err); }
