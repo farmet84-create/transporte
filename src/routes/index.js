@@ -53,8 +53,9 @@ router.get('/conductores', autenticar, async (req, res, next) => {
     const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM conductores ${where}`, params);
     const [rows] = await pool.query(
       `SELECT id, uuid, nombres, apellidos, tipo_documento, numero_documento,
-              telefono, email, numero_licencia, categoria_licencia,
-              vencimiento_licencia, salario_base, activo
+              telefono, email, direccion, ciudad, numero_licencia, categoria_licencia,
+              vencimiento_licencia, fecha_ingreso, tipo_contrato, salario_base,
+              auxilio_transporte, observaciones, activo
        FROM conductores ${where} ORDER BY nombres ASC LIMIT ? OFFSET ?`,
       [...params, parseInt(limite), offset]
     );
