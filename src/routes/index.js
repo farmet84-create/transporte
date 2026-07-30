@@ -31,6 +31,8 @@ router.use((req, res, next) => {
 router.post('/auth/login',            auth.login);
 router.get ('/auth/me',               autenticar, auth.perfil);
 router.put ('/auth/cambiar-password', autenticar, auth.cambiarPassword);
+router.post('/auth/sso-generar',      autenticar, auth.ssoGenerar);
+router.post('/auth/sso-consumir',     auth.ssoConsumir);
 
 // ─── VEHÍCULOS ───────────────────────────────────────────
 router.get   ('/vehiculos',     autenticar, vehiculos.listar);
