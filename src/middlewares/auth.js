@@ -2,6 +2,7 @@
 
 const jwt    = require('jsonwebtoken');
 const logger = require('../config/logger');
+const { verificarSuscripcion } = require('./verificarSuscripcion');
 
 // Verificar token JWT en cada request protegido
 function autenticar(req, res, next) {
@@ -15,7 +16,7 @@ function autenticar(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.usuario = payload; // { id, empresa_id, rol, email }
-    next();
+    return verificarSuscripcion(req, res, next);
   } catch (error) {
     logger.warn('Token inválido', { error: error.message, ip: req.ip });
     return res.status(401).json({ ok: false, mensaje: 'Token inválido o expirado' });
