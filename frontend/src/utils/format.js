@@ -25,6 +25,10 @@ export const formatPct = (valor) => {
 // Formatear fecha
 export const formatFecha = (fecha) => {
   if (!fecha) return '—'
+  // Tomar solo YYYY-MM-DD del texto — evita que la conversión a hora local (Colombia)
+  // retroceda un día cuando el valor viene en UTC (ej: "2026-07-30T00:00:00.000Z")
+  const m = fecha.toString().substring(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`
   return new Date(fecha).toLocaleDateString('es-CO', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   })
