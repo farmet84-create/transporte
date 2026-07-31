@@ -9,7 +9,8 @@ import { conciliacionAPI } from '../services/api'
 import { formatCOP, formatFecha } from '../utils/format'
 
 const hoy = new Date()
-const hoyStr = hoy.toISOString().substring(0, 10)
+// Fecha LOCAL (Colombia), no UTC — toISOString() adelanta el día en la noche
+const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
 const primerDiaMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`
 
 const BANCOS = ['Nequi', 'Bancolombia', 'Davivienda', 'Otro']
