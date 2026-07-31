@@ -13,7 +13,6 @@ const alertas     = require('../controllers/alertasController');
 const mantenimiento = require('../controllers/mantenimientoController');
 const conciliacion  = require('../controllers/conciliacionController');
 const suscripcion = require('../controllers/suscripcionController');
-const { verificarSuscripcion } = require('../middlewares/verificarSuscripcion');
 const { pool }    = require('../config/database');
 
 const router = Router();
@@ -21,11 +20,9 @@ const router = Router();
 // ─── WEBHOOK SUSCRIPCIÓN (público, sin JWT) ──────────────────────────────────
 router.post('/suscripcion/webhook', suscripcion.webhook);
 
-// ─── MIDDLEWARE SUSCRIPCIÓN (aplica a todas las rutas autenticadas) ──────────
-router.use((req, res, next) => {
-  if (!req.usuario) return next();
-  return verificarSuscripcion(req, res, next);
-});
+// Nota: la verificación de suscripción ahora se ejecuta dentro de `autenticar`
+// (middlewares/auth.js), justo después de validar el token — así siempre
+// se aplica a las rutas protegidas, sin depender del orden de registro.
 
 // ─── AUTH ────────────────────────────────────────────────
 router.post('/auth/login',            auth.login);
